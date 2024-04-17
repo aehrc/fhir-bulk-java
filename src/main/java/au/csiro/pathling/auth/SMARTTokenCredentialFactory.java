@@ -123,7 +123,7 @@ public class SMARTTokenCredentialFactory implements TokenCredentialFactory {
       return ClientAuthMethod.create(discoveryResponse.getTokenEndpoint(), authConfig);
       // TODO: Maybe add validation of the capabilities here
     } catch (final IOException ex) {
-      log.error("Failed to retrieve SMART configuration for fhirEndpoint: {}, ex: {}", fhirEndpoint,
+      log.error("Failed to retrieve SMART configuration for fhirEndpoint: {}", fhirEndpoint,
           ex);
       throw new RuntimeException("Failed to retrieve SMART configuration", ex);
     }

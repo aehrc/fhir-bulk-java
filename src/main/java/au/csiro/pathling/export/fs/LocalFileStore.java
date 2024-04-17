@@ -109,7 +109,7 @@ class LocalFileStore implements FileStore {
   }
 
   @Override
-  public void close() throws IOException {
+  public void close() {
     // do nothing
   }
 

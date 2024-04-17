@@ -33,7 +33,7 @@ import javax.annotation.Nonnull;
  */
 @SuppressWarnings("unused")
 public class RunBulkExport {
-  
+
   /**
    * Run the Bulk Export Client with Cerner.
    */
@@ -71,7 +71,6 @@ public class RunBulkExport {
 
   /**
    * Run the Bulk Export Client with Cerner.
-   *
    */
   public static void runCernerAssymetric() {
     final String fhirEndpointUrl = "https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d";
@@ -183,7 +182,6 @@ public class RunBulkExport {
 
   /**
    * Run the Bulk Export Client with Cerner.
-   *
    */
   public static void runSystemLevelWithAuthRS384() {
 
@@ -226,7 +224,6 @@ public class RunBulkExport {
 
   /**
    * Run the Bulk Export Client with Cerner.
-   *
    */
   public static void runSystemLevelWithAuthES384() {
 
@@ -297,9 +294,8 @@ public class RunBulkExport {
    * Run the Bulk Export Client with Cerner.
    *
    * @param args the command line arguments
-   * @throws Exception if an error occurs
    */
-  public static void main(@Nonnull final String[] args) throws Exception {
+  public static void main(@Nonnull final String[] args) {
     runSystemLevelWithAuthRS384();
   }
 }

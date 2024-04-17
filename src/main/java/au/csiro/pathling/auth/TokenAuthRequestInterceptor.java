@@ -49,8 +49,7 @@ public class TokenAuthRequestInterceptor implements HttpRequestInterceptor {
   }
 
   @Override
-  public void process(@Nonnull final HttpRequest request, @Nonnull final HttpContext context)
-      throws HttpException, IOException {
+  public void process(@Nonnull final HttpRequest request, @Nonnull final HttpContext context) {
     final CredentialsProvider credentialsProvider = (CredentialsProvider) context.getAttribute(
         HttpClientContext.CREDS_PROVIDER);
     final HttpHost targetHost = (HttpHost) context.getAttribute(HttpCoreContext.HTTP_TARGET_HOST);
