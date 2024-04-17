@@ -1,0 +1,39 @@
+# Maven
+target/
+tmp/
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# IDEA
+.idea
+*.iml
+
+
+#Others
+lib/import/node_modules/
+lib/js/node_modules/
+
+#Mac
+.DS_Store
+
+
+#Python
+__pycache__/
+*.egg-info
+_version.py
+.ipynb_checkpoints/
+
+metastore_db
+derby.log
+spark-warehouse
+
+
+#R
+*.Rproj
+
+.Rproj.user
+/lib/R/pathlyr/.Rhistory
+*.Rcheck
