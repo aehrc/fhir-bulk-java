@@ -322,6 +322,10 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
       </plugin>
@@ -361,6 +365,13 @@
             <compilerArgs>
               <arg>-Xlint:all</arg>
             </compilerArgs>
+            <annotationProcessorPaths>
+              <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${pathling.lombokVersion}</version>
+              </path>
+            </annotationProcessorPaths>
           </configuration>
         </plugin>
         <plugin>
@@ -375,10 +386,58 @@
             <failIfNoTests>false</failIfNoTests>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>3.5.0</version>
+          <executions>
+            <execution>
+              <id>javadoc-jar</id>
+              <phase>prepare-package</phase>
+              <goals>
+                <goal>jar</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <doclint>all,-missing</doclint>
+            <sourcepath>target/generated-sources/delombok</sourcepath>
+            <source>11</source>
+            <detectLinks/>
+            <doctitle>Fhir Bulk Export Client ${project.version} API</doctitle>
+            <windowtitle>Fhir Bulk Export Client ${project.version} API</windowtitle>
+            <bottom>
+              <![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]>
+            </bottom>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.projectlombok</groupId>
+          <artifactId>lombok-maven-plugin</artifactId>
+          <version>1.18.20.0</version>
+          <executions>
+            <execution>
+              <id>delombok</id>
+              <phase>generate-sources</phase>
+              <goals>
+                <goal>delombok</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <formatPreferences>
+              <javaLangAsFQN>skip</javaLangAsFQN>
+            </formatPreferences>
+            <verbose>true</verbose>
+            <encoding>UTF-8</encoding>
+            <sourceDirectory>src/main/java</sourceDirectory>
+            <addOutputDirectory>false</addOutputDirectory>
+          </configuration>
+        </plugin>
+
       </plugins>
     </pluginManagement>
   </build>
-
   <profiles>
     <profile>
       <id>mavenRelease</id>
