@@ -401,7 +401,7 @@
           </executions>
           <configuration>
             <doclint>all,-missing</doclint>
-            <sourcepath>target/generated-sources/delombok</sourcepath>
+            <sourcepath>target/delombok</sourcepath>
             <source>11</source>
             <detectLinks/>
             <doctitle>Fhir Bulk Export Client ${project.version} API</doctitle>
@@ -431,10 +431,10 @@
             <verbose>true</verbose>
             <encoding>UTF-8</encoding>
             <sourceDirectory>src/main/java</sourceDirectory>
+            <outputDirectory>target/delombok</outputDirectory>
             <addOutputDirectory>false</addOutputDirectory>
           </configuration>
         </plugin>
-
       </plugins>
     </pluginManagement>
   </build>
