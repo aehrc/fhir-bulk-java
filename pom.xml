@@ -174,11 +174,6 @@
       <artifactId>logback-classic</artifactId>
       <scope>test</scope>
     </dependency>
-    <!--dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-bundle</artifactId>
-      <scope>test</scope>
-    </dependency-->
   </dependencies>
 
   <dependencyManagement>
@@ -225,10 +220,10 @@
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
           </exclusion>
-          <exclusion>
+          <!--exclusion>
             <groupId>org.jboss.logging</groupId>
             <artifactId>jboss-logging</artifactId>
-          </exclusion>
+          </exclusion-->
         </exclusions>
       </dependency>
       <dependency>

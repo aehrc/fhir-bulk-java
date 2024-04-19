@@ -17,10 +17,11 @@
 
 package au.csiro.fhir.export.ws;
 
+import java.time.Duration;
+import javax.annotation.Nonnull;
+import javax.validation.constraints.Min;
 import lombok.Builder;
 import lombok.Value;
-
-import java.time.Duration;
 
 /**
  * Configuration relating to the FHIR asynchronous request pattern.
@@ -35,6 +36,7 @@ public class AsyncConfig {
    * The minimum delay between two consecutive status requests. This may override the value returned
    * from the server in the 'retry-after' header.
    */
+  @Nonnull
   @Builder.Default
   Duration minPoolingDelay = Duration.ofSeconds(1);
 
@@ -42,18 +44,21 @@ public class AsyncConfig {
    * The maxium delay between two consecutive status requests. This may override the value returned
    * from the server in the 'retry-after' header.
    */
+  @Nonnull
   @Builder.Default
   Duration maxPoolingDelay = Duration.ofSeconds(60);
 
   /**
    * The delay to retry after a transient error in a status request.
    */
+  @Nonnull
   @Builder.Default
   Duration transientErrorDelay = Duration.ofSeconds(2);
 
   /**
    * The delay to retry after the HTTP 429 'Too many requests' response.
    */
+  @Nonnull
   @Builder.Default
   Duration tooManyRequestsDelay = Duration.ofSeconds(10);
 
@@ -61,5 +66,6 @@ public class AsyncConfig {
    * The maximum number of consecutive transient errors to retry before giving up.
    */
   @Builder.Default
+  @Min(0)
   int maxTransientErrors = 3;
 }

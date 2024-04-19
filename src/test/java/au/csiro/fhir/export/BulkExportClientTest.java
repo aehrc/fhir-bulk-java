@@ -18,17 +18,20 @@
 package au.csiro.fhir.export;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import au.csiro.fhir.auth.AuthConfig;
+import au.csiro.fhir.export.download.UrlDownloadTemplate.UrlDownloadEntry;
 import au.csiro.fhir.export.ws.AssociatedData;
 import au.csiro.fhir.export.ws.BulkExportRequest;
 import au.csiro.fhir.export.ws.BulkExportResponse;
 import au.csiro.fhir.export.ws.BulkExportResponse.FileItem;
-import au.csiro.fhir.export.download.UrlDownloadTemplate.UrlDownloadEntry;
+import au.csiro.filestore.FileStore.FileHandle;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
-import au.csiro.filestore.FileStore.FileHandle;
+import javax.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -108,7 +111,7 @@ public class BulkExportClientTest {
         downloadUrls
     );
   }
-  
+
   @Test
   void testBuildsRequestWithRequestedAssociatedData() {
 
@@ -126,6 +129,27 @@ public class BulkExportClientTest {
                 AssociatedData.custom("customXXX"), AssociatedData.custom("customYYY")))
             .build(),
         client.buildBulkExportRequest());
+  }
+
+
+  @Test
+  void testFailsEarlyWithInvalidConfiguration() {
+
+    final BulkExportClient client = BulkExportClient.builder()
+        .withFhirEndpointUrl("invalid.url")
+        .withOutputDir("output-dir")
+        .withAuthConfig(AuthConfig.builder().enabled(true).build())
+        .build();
+
+    final ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
+        client::export);
+
+    assertEquals(
+        "Invalid Bulk Export Configuration\n"
+            + "authConfig.clientId: must be supplied if auth is enabled\n"
+            + "authConfig: either clientSecret or privateKeyJWK must be supplied if auth is enabled\n"
+            + "fhirEndpointUrl: must be a valid URL",
+        ex.getMessage());
   }
 
 }

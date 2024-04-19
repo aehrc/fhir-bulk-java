@@ -17,7 +17,8 @@
 
 package au.csiro.fhir.auth;
 
-import au.csiro.fhir.auth.AuthConfig.ValidAuthConfiguration;
+import au.csiro.fhir.auth.AuthConfig.ValidAuthConfig;
+import au.csiro.utils.ValidationUtils.ViolationAccumulator;
 import java.io.Serializable;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -43,7 +44,7 @@ import org.hibernate.validator.constraints.URL;
  */
 @Data
 @Builder
-@ValidAuthConfiguration
+@ValidAuthConfig
 public class AuthConfig implements Serializable {
 
   private static final long serialVersionUID = 6321330066417583745L;
@@ -120,13 +121,12 @@ public class AuthConfig implements Serializable {
   @Retention(RetentionPolicy.RUNTIME)
   @Constraint(validatedBy = AuthConfigValidator.class)
   @Documented
-  public @interface ValidAuthConfiguration {
+  public @interface ValidAuthConfig {
 
     /**
      * @return the error message template
      */
-    String message() default "If terminology authentication is enabled, token endpoint, "
-        + "client ID and client secret must be supplied.";
+    String message() default "Invalid AuthConfig";
 
     /**
      * @return the groups the constraint belongs to
@@ -139,19 +139,26 @@ public class AuthConfig implements Serializable {
     Class<? extends Payload>[] payload() default {};
 
   }
-
+  
   /**
    * Validates the configuration.
    */
   public static class AuthConfigValidator implements
-      ConstraintValidator<ValidAuthConfiguration, AuthConfig> {
+      ConstraintValidator<ValidAuthConfig, AuthConfig> {
 
     @Override
     public boolean isValid(final AuthConfig value,
         final ConstraintValidatorContext context) {
       if (value.isEnabled()) {
-        return value.getTokenEndpoint() != null && value.getClientId() != null
-            && value.getClientSecret() != null;
+        return ViolationAccumulator.withNoDefault(context)
+            .checkThat(value.isUseSMART() || value.getTokenEndpoint() != null,
+                "must be supplied if SMART configuration is not used and auth is enabled",
+                "tokenEndpoint")
+            .checkThat(value.getClientId() != null, "must be supplied if auth is enabled",
+                "clientId")
+            .checkThat(value.getClientSecret() != null || value.getPrivateKeyJWK() != null,
+                "either clientSecret or privateKeyJWK must be supplied if auth is enabled")
+            .isValid();
       }
       return true;
     }

@@ -36,6 +36,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Builder;
 import lombok.Value;
+import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -285,7 +286,7 @@ public class BulkExportRequest {
       postRequest.setEntity(WebUtils.toFhirJsonEntity(this.toParameters()));
       httpRequest = postRequest;
     }
-    httpRequest.setHeader("accept", WebUtils.APPLICATION_FHIR_JSON.getMimeType());
+    httpRequest.setHeader(HttpHeaders.ACCEPT, WebUtils.APPLICATION_FHIR_JSON.getMimeType());
     httpRequest.setHeader("prefer", "respond-async");
     return httpRequest;
   }

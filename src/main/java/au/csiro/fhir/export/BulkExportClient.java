@@ -20,21 +20,12 @@ package au.csiro.fhir.export;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
-import au.csiro.fhir.auth.SMARTTokenCredentialFactory;
-import au.csiro.http.TokenAuthRequestInterceptor;
-import au.csiro.fhir.auth.TokenCredentialFactory;
-import au.csiro.http.TokenCredentials;
 import au.csiro.fhir.auth.AuthConfig;
-import au.csiro.http.HttpClientConfig;
+import au.csiro.fhir.auth.SMARTTokenCredentialFactory;
+import au.csiro.fhir.auth.TokenCredentialFactory;
 import au.csiro.fhir.export.BulkExportResult.FileResult;
 import au.csiro.fhir.export.download.UrlDownloadTemplate;
 import au.csiro.fhir.export.download.UrlDownloadTemplate.UrlDownloadEntry;
-import au.csiro.fhir.model.Reference;
-import au.csiro.filestore.FileStore;
-import au.csiro.filestore.FileStore.FileHandle;
-import au.csiro.filestore.FileStoreFactory;
-import au.csiro.utils.ExecutorServiceResource;
-import au.csiro.utils.TimeoutUtils;
 import au.csiro.fhir.export.ws.AssociatedData;
 import au.csiro.fhir.export.ws.AsyncConfig;
 import au.csiro.fhir.export.ws.AsyncResponseCallback;
@@ -46,6 +37,16 @@ import au.csiro.fhir.export.ws.BulkExportRequest.PatientLevel;
 import au.csiro.fhir.export.ws.BulkExportRequest.SystemLevel;
 import au.csiro.fhir.export.ws.BulkExportResponse;
 import au.csiro.fhir.export.ws.BulkExportTemplate;
+import au.csiro.fhir.model.Reference;
+import au.csiro.filestore.FileStore;
+import au.csiro.filestore.FileStore.FileHandle;
+import au.csiro.filestore.FileStoreFactory;
+import au.csiro.http.HttpClientConfig;
+import au.csiro.http.TokenAuthRequestInterceptor;
+import au.csiro.http.TokenCredentials;
+import au.csiro.utils.ExecutorServiceResource;
+import au.csiro.utils.TimeoutUtils;
+import au.csiro.utils.ValidationUtils;
 import com.google.common.collect.Streams;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -61,6 +62,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.validation.Valid;
 import javax.validation.constraints.Min;
 import lombok.Builder;
 import lombok.Singular;
@@ -71,6 +73,7 @@ import org.apache.http.auth.AuthScope;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.hibernate.validator.constraints.URL;
 
 
 /**
@@ -87,6 +90,7 @@ public class BulkExportClient {
    * The URL of the FHIR server to export from.
    */
   @Nonnull
+  @URL
   String fhirEndpointUrl;
 
   /**
@@ -193,6 +197,7 @@ public class BulkExportClient {
    * The configuration for the HTTP client.
    */
   @Nonnull
+  @Valid
   @Builder.Default
   HttpClientConfig httpClientConfig = HttpClientConfig.builder().build();
 
@@ -200,6 +205,7 @@ public class BulkExportClient {
    * The configuration for the async operations.
    */
   @Nonnull
+  @Valid
   @Builder.Default
   AsyncConfig asyncConfig = AsyncConfig.builder().build();
 
@@ -208,6 +214,7 @@ public class BulkExportClient {
    * The configuration for the authentication.
    */
   @Nonnull
+  @Valid
   @Builder.Default
   AuthConfig authConfig = AuthConfig.builder().build();
 
@@ -268,6 +275,10 @@ public class BulkExportClient {
    * @throws BulkExportException if the export fails
    */
   public BulkExportResult export() {
+
+    // Validate configuration
+    ValidationUtils.ensureValid(this, "Invalid Bulk Export Configuration");
+    
     try (
         final TokenCredentialFactory tokenAuthFactory = createTokenProvider();
         final FileStore fileStore = createFileStore();
