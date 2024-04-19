@@ -1,6 +1,7 @@
 package au.csiro.fhir.example;
 
 import au.csiro.fhir.export.BulkExportClient;
+import au.csiro.fhir.export.BulkExportResult;
 import au.csiro.fhir.export.ws.AsyncConfig;
 import java.time.Duration;
 import java.time.Instant;
@@ -30,14 +31,14 @@ public class BulkDataSystemLevelExportApp {
     System.out.println(
         "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
 
-    BulkExportClient.systemBuilder()
+    final BulkExportResult result = BulkExportClient.systemBuilder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
         .withTypes(List.of("Patient", "Condition"))
-        //.withSince(from)
-        .withAsyncConfig(AsyncConfig.builder().maxPoolingDelay(Duration.ofSeconds(10)).build())
-        .withTimeout(Duration.ofMinutes(60))
         .build()
         .export();
+    
+    System.out.print(result);
+    
   }
 }
