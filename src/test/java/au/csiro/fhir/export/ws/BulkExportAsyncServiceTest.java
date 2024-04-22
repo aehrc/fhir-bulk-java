@@ -17,12 +17,18 @@
 
 package au.csiro.fhir.export.ws;
 
+import static au.csiro.test.TestUtils.anyResponseHandler;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
+
+import au.csiro.fhir.export.ws.BulkExportRequest.GroupLevel;
 import au.csiro.fhir.model.Parameters;
 import au.csiro.fhir.model.Reference;
-import au.csiro.fhir.export.ws.BulkExportRequest.GroupLevel;
+import java.io.IOException;
+import java.net.URI;
+import java.util.List;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.util.EntityUtils;
@@ -33,13 +39,6 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.io.IOException;
-import java.net.URI;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class BulkExportAsyncServiceTest {
@@ -55,7 +54,7 @@ class BulkExportAsyncServiceTest {
 
   @Test
   void testKickOffSendsACorrectGetRequest() throws IOException {
-    when(httpClient.execute(Mockito.any(HttpUriRequest.class), Mockito.any(ResponseHandler.class)))
+    when(httpClient.execute(Mockito.any(HttpUriRequest.class), anyResponseHandler()))
         .thenReturn(asyncResponse);
     final BulkExportAsyncService service = new BulkExportAsyncService(httpClient,
         URI.create("http://example1.com/fhir"));
@@ -65,7 +64,7 @@ class BulkExportAsyncServiceTest {
     final AsyncResponse response = service.kickOff(systemExportRequest);
     assertEquals(asyncResponse, response);
     Mockito.verify(httpClient)
-        .execute(httpRequestCaptor.capture(), Mockito.any(ResponseHandler.class));
+        .execute(httpRequestCaptor.capture(), anyResponseHandler());
     assertEquals("GET", httpRequestCaptor.getValue().getMethod());
     assertEquals("http://example1.com/fhir/$export?_type=Patient%2CCondition",
         httpRequestCaptor.getValue().getURI().toString());
@@ -77,7 +76,7 @@ class BulkExportAsyncServiceTest {
 
   @Test
   void testKickOffSendsACorrectPostRequest() throws IOException {
-    when(httpClient.execute(Mockito.any(HttpUriRequest.class), Mockito.any(ResponseHandler.class)))
+    when(httpClient.execute(Mockito.any(HttpUriRequest.class), anyResponseHandler()))
         .thenReturn(asyncResponse);
     final BulkExportAsyncService service = new BulkExportAsyncService(httpClient,
         URI.create("http://example1.com/fhir"));
@@ -89,7 +88,7 @@ class BulkExportAsyncServiceTest {
     final AsyncResponse response = service.kickOff(systemExportRequest);
     assertEquals(asyncResponse, response);
     Mockito.verify(httpClient)
-        .execute(httpRequestCaptor.capture(), Mockito.any(ResponseHandler.class));
+        .execute(httpRequestCaptor.capture(), anyResponseHandler());
     assertEquals("POST", httpRequestCaptor.getValue().getMethod());
     assertEquals("http://example1.com/fhir/Group/id0001/$export",
         httpRequestCaptor.getValue().getURI().toString());
@@ -106,17 +105,17 @@ class BulkExportAsyncServiceTest {
         ).toJson(),
         EntityUtils.toString(postEntity));
   }
-  
+
   @Test
   void testCheckStatusSendsCorrectGetRequest() throws IOException {
-    when(httpClient.execute(Mockito.any(HttpUriRequest.class), Mockito.any(ResponseHandler.class)))
+    when(httpClient.execute(Mockito.any(HttpUriRequest.class), anyResponseHandler()))
         .thenReturn(asyncResponse);
     final BulkExportAsyncService service = new BulkExportAsyncService(httpClient,
         URI.create("http://example1.com/fhir"));
     final AsyncResponse response = service.checkStatus(URI.create("http://example.com/$pool1"));
     assertEquals(asyncResponse, response);
     Mockito.verify(httpClient)
-        .execute(httpRequestCaptor.capture(), Mockito.any(ResponseHandler.class));
+        .execute(httpRequestCaptor.capture(), anyResponseHandler());
     assertEquals("GET", httpRequestCaptor.getValue().getMethod());
     assertEquals("http://example.com/$pool1", httpRequestCaptor.getValue().getURI().toString());
     assertEquals("application/json",

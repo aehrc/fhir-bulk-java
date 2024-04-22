@@ -17,6 +17,7 @@
 
 package au.csiro.fhir.auth;
 
+import static au.csiro.test.TestUtils.anyResponseHandler;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.Mockito.when;
@@ -24,14 +25,12 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
-import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -64,8 +63,7 @@ class SMARTTokenCredentialFactoryTest {
     final SMARTDiscoveryResponse discoveryResponse = SMARTDiscoveryResponse.builder()
         .tokenEndpoint("http://example.com/token")
         .build();
-    when(httpClient.execute(httpRequestCaptor.capture(),
-        ArgumentMatchers.any(ResponseHandler.class)))
+    when(httpClient.execute(httpRequestCaptor.capture(),anyResponseHandler()))
         .thenReturn(discoveryResponse);
     assertEquals(Optional.of(
             SymmetricClientAuthMethod.builder().clientId("client_id").clientSecret("client_secret")

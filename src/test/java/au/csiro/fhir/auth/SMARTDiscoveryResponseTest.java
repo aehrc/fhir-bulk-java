@@ -17,18 +17,17 @@
 
 package au.csiro.fhir.auth;
 
+import static au.csiro.test.TestUtils.anyResponseHandler;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URI;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -48,8 +47,7 @@ class SMARTDiscoveryResponseTest {
     final SMARTDiscoveryResponse expectedResponse = SMARTDiscoveryResponse.builder()
         .tokenEndpoint("https://for.bar/token")
         .build();
-    when(httpClient.execute(httpRequestCaptor.capture(),
-        ArgumentMatchers.any(ResponseHandler.class)))
+    when(httpClient.execute(httpRequestCaptor.capture(), anyResponseHandler()))
         .thenReturn(expectedResponse);
 
     final SMARTDiscoveryResponse response = SMARTDiscoveryResponse.get(

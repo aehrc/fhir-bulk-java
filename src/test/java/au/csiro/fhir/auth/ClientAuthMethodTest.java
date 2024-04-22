@@ -17,10 +17,10 @@
 
 package au.csiro.fhir.auth;
 
+import static au.csiro.test.TestUtils.anyResponseHandler;
 import static au.csiro.test.TestUtils.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.utils.URLEncodedUtils;
@@ -67,7 +66,7 @@ class ClientAuthMethodTest {
   @Test
   public void testSymmetricClientAuthMethod() throws IOException {
 
-    when(httpClient.execute(httpRequestCaptor.capture(), any(ResponseHandler.class)))
+    when(httpClient.execute(httpRequestCaptor.capture(), anyResponseHandler()))
         .thenReturn(SYNC_RESPONSE);
 
     final ClientAuthMethod authMethod = ClientAuthMethod.create("http://token.endpoint",
@@ -97,7 +96,7 @@ class ClientAuthMethodTest {
   @Test
   public void testAsymmetricClientAuthMethod() throws IOException {
 
-    when(httpClient.execute(httpRequestCaptor.capture(), any(ResponseHandler.class)))
+    when(httpClient.execute(httpRequestCaptor.capture(), anyResponseHandler()))
         .thenReturn(ASYNC_RESPONSE);
 
     final ClientAuthMethod authMethod = ClientAuthMethod.create("http://token.endpoint/async",

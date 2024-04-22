@@ -5,6 +5,8 @@ import java.nio.charset.StandardCharsets;
 import javax.annotation.Nonnull;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.client.ResponseHandler;
+import org.mockito.Mockito;
 
 /**
  * Utility methods for testing.
@@ -26,4 +28,11 @@ public class TestUtils {
       throw new RuntimeException("Cannot read resource", ex);
     }
   }
+
+  // suppress warning for unchecked cast
+  @SuppressWarnings("unchecked")
+  public static <T> ResponseHandler<T> anyResponseHandler() {
+    return Mockito.any(ResponseHandler.class);
+  }
+  
 }
