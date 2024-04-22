@@ -62,6 +62,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.validation.ConstraintViolationException;
 import javax.validation.Valid;
 import javax.validation.constraints.Min;
 import lombok.Builder;
@@ -83,7 +84,7 @@ import org.hibernate.validator.constraints.URL;
  */
 @Value
 @Slf4j
-@Builder(setterPrefix = "with")
+@Builder(setterPrefix = "with", buildMethodName = "buildUnchecked")
 public class BulkExportClient {
 
   /**
@@ -235,6 +236,18 @@ public class BulkExportClient {
           .map(AssociatedData::fromCode)
           .collect(Collectors.toUnmodifiableList()));
     }
+    
+    /**
+     * Build a valid {@link BulkExportClient} instance.
+     *
+     * @return the client
+     * @throws ConstraintViolationException if the client configuration is invalid
+     */
+    public BulkExportClient build() throws ConstraintViolationException {
+      final BulkExportClient client = buildUnchecked();
+      ValidationUtils.ensureValid(client, "Invalid Bulk Export Client Configuration");
+      return client;
+    }
   }
 
   /**
@@ -275,10 +288,6 @@ public class BulkExportClient {
    * @throws BulkExportException if the export fails
    */
   public BulkExportResult export() {
-
-    // Validate configuration
-    ValidationUtils.ensureValid(this, "Invalid Bulk Export Configuration");
-    
     try (
         final TokenCredentialFactory tokenAuthFactory = createTokenProvider();
         final FileStore fileStore = createFileStore();
