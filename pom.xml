@@ -72,7 +72,7 @@
     <!-- we do not use recent version 1.18.24 as it (wrongly) copies the JSR-380 NonNull
          annotations from fields to getters resulting in duplicate constraint violations.
          This has been fixed in the main branch but not released yet -->
-    <bulkExport.lombokVersion>1.18.28</bulkExport.lombokVersion>
+    <bulkExport.lombokVersion>1.18.32</bulkExport.lombokVersion>
     <bulkExport.guavaVersion>32.1.3-jre</bulkExport.guavaVersion>
     <bulkExport.slf4jVersion>1.7.36</bulkExport.slf4jVersion>
     <bulkExport.httpclientVersion>4.5.14</bulkExport.httpclientVersion>
@@ -406,6 +406,13 @@
           <groupId>org.projectlombok</groupId>
           <artifactId>lombok-maven-plugin</artifactId>
           <version>1.18.20.0</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>${bulkExport.lombokVersion}</version>
+            </dependency>
+          </dependencies>
           <executions>
             <execution>
               <id>delombok</id>
