@@ -2,25 +2,41 @@ name: Java CI with Maven
 
 on:
   push:
-    branches: [ '**' ]
-jobs:
-  build:
+    branches-ignore:
+      - gh-pages
+env: 
+  distribution: 'zulu'
+
+jobs:          
+  verify-java-11:
+    runs-on: ubuntu-latest
+    env:
+      java-version: 11
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK ${{ env.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.java-version }}
+          distribution: ${{ env.distribution }}
+          cache: 'maven'
+          cache-dependency-path: 'pom.xml'
+      - name: Build with Maven
+        run: mvn -B verify --file pom.xml
+  verify-other-jvms:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java-version: ['11', '17']
+        java-version: ['17', '21']
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Set up JDK ${{ matrix.java-version }}
         uses: actions/setup-java@v2
         with:
           java-version: ${{ matrix.java-version }}
-          distribution: 'zulu'
-      - name: Cache Maven packages
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
+          distribution: ${{ env.distribution }}
+          cache: 'maven'
+          cache-dependency-path: 'pom.xml'
       - name: Build with Maven
         run: mvn -B verify --file pom.xml
+
