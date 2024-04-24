@@ -5,7 +5,7 @@ Notes
 
 ### References on Bulk Export
  
-- Bulk Export Specification: https://build.fhir.org/ig/HL7/bulk-data/export.html
+- Bulk Export Specification: https://hl7.org/fhir/uv/bulkdata/export.html
 - Bulk Data Demo Server: https://bulk-data.smarthealthit.org/
 - Bulk Data Client JS (https://github.com/smart-on-fhir/bulk-data-client)
 
