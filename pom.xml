@@ -27,7 +27,7 @@
   <artifactId>bulk-export</artifactId>
   <packaging>jar</packaging>
 
-  <name>Fhr Bulk Client</name>
+  <name>FHIR Bulk Client</name>
   <description>Java client library for FHIR Bulk Export.</description>
 
   <developers>

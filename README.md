@@ -7,23 +7,42 @@ specification.
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your
-local machine for development and testing purposes.
+To use the FHIR Bulk Java client in your project, add the following dependency (
+replace `1.0.0` with the desired version):
 
-### Prerequisites
-
-- Java
-- Maven
-
-### Installation
-
-1. Clone the repository
-
-```bash
-git clone https://github.com/aehrc/fhir-bulk-java.git`
+```xml
+<dependency>
+    <groupId>au.csiro.fhir</groupId>
+    <artifactId>bulk-export</artifactId>
+    <version>1.0.0</version>
+</dependency>
 ```
 
-2. Build the project and run unit tsts
+The FHIR build export is implemented in
+the `au.csiro.fhir.export.BulkExportClient` class.
+Use one of the builder methods to create a client instance and run the export.
+
+```java 
+final BulkExportClient client = BulkExportClient.systemBuilder()
+        .withFhirEndpointUrl(fhirEndpointUrl)
+        .withOutputDir(outputDir)
+        .build();
+
+final BulkExportResult result = client.export();
+// do something with the result
+```
+
+See: [Usage examples](#usage-examples) for more details of how to use the client
+in common scenarios.
+
+### Building locally
+
+Prerequisites:
+
+- Java 11 +
+- Maven 3 +
+
+Build the project and run unit tests with:
 
 ```bash
 mvn clean install
@@ -52,10 +71,9 @@ final BulkExportResult result = BulkExportClient.systemBuilder()
         .export();
 
 // Examine the result
-System.out.
+result.
 
-println(
-        result.getTransactonTime());
+getTransactonTime();
 ```
 
 ### Fully customised group level export (unauthenticated)
