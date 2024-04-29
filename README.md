@@ -2,8 +2,37 @@
 
 [![Test](https://github.com/aehrc/fhir-bulk-client/workflows/Verify/badge.svg)](https://github.com/aehrc/fhir-bulk-client/actions?query=workflow%3AVerify)
 
-This project is a Java implementation of the FHIR Bulk Data Access (Flat FHIR)
-specification.
+This project is a Java library with the API for the FHIR Bulk Export Client
+compatible with
+the [Bulk Data Access specification](https://hl7.org/fhir/uv/bulkdata/export.html).
+
+Supported features:
+
+- Fluent Java API for configuring and running the export
+- System, group and patient level export
+- All Bulk Data
+  v2 [query parameters](https://hl7.org/fhir/uv/bulkdata/export.html#query-parameters) (
+  with some limitations for patient references)
+- Asymmetric and
+  symmetric [SMART authentication profiles](https://www.hl7.org/fhir/smart-app-launch/client-authentication.html)
+- Automatic token endpoint discovery with SMART configuration discovery
+- Parallel download with configurable concurrency
+- Download destination to a file system abstraction with implementation for local
+  filesystem
+- Predictable naming of downloaded files
+- Customisable run-time configuration
+- `slf4j` based logging
+
+Limitations:
+
+- Only `reference` elements are supported in the `Reference` resource (see: '
+  patient' query parameter)
+- Attachment references in downloaded resources are not downloaded
+- No support to request lenient processing at the server (Prefer:
+  handling=lenient)
+- `deleted` and `error` urls in the kick-off response are not downloaded
+- Downloaded files are NOT validated in any way (e.g. to contain encoded
+  resources of to contain the declared number of resources)
 
 ## Getting Started
 
@@ -71,9 +100,7 @@ final BulkExportResult result = BulkExportClient.systemBuilder()
         .export();
 
 // Examine the result
-result.
-
-getTransactonTime();
+result.getTransactonTime();
 ```
 
 ### Fully customised group level export (unauthenticated)
