@@ -66,7 +66,7 @@
     <system>GitHub Actions</system>
     <url>https://github.com/aehrc/fhir-bulk-java/actions</url>
   </ciManagement>
-  
+
   <repositories>
     <repository>
       <id>ossrh</id>
@@ -103,6 +103,7 @@
     <bulkExport.mockitoVersion>4.8.1</bulkExport.mockitoVersion>
     <bulkExport.jupyterVersion>5.9.1</bulkExport.jupyterVersion>
     <bulkExport.surefireVersion>3.1.2</bulkExport.surefireVersion>
+    <version.jakarta.validation-api>3.0.2</version.jakarta.validation-api>
   </properties>
 
   <dependencies>
@@ -237,18 +238,7 @@
       <dependency>
         <groupId>org.hibernate.validator</groupId>
         <artifactId>hibernate-validator</artifactId>
-        <version>6.0.13.Final</version>
-        <exclusions>
-          <exclusion>
-            <groupId>javax.validation</groupId>
-            <artifactId>validation-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.validation</groupId>
-        <artifactId>jakarta.validation-api</artifactId>
-        <version>2.0.2</version>
+        <version>8.0.1.Final</version>
       </dependency>
 
       <!-- Java Auth -->
@@ -329,6 +319,11 @@
         <groupId>org.mockito</groupId>
         <artifactId>mockito-junit-jupiter</artifactId>
         <version>${bulkExport.mockitoVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>jakarta.validation</groupId>
+        <artifactId>jakarta.validation-api</artifactId>
+        <version>${version.jakarta.validation-api}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

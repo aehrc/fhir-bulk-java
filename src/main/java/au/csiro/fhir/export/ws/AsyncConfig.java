@@ -19,7 +19,7 @@ package au.csiro.fhir.export.ws;
 
 import java.time.Duration;
 import javax.annotation.Nonnull;
-import javax.validation.constraints.Min;
+import jakarta.validation.constraints.Min;
 import lombok.Builder;
 import lombok.Value;
 
