@@ -1,0 +1,51 @@
+name: Deploy Snapshot to MavenCentral
+
+on:
+  workflow_dispatch
+
+env:
+  distribution: 'zulu'
+  java-version: 11
+
+jobs:
+  deploy-maven-snapshot:
+    runs-on: ubuntu-latest
+    environment:      
+      name: maven-central
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK ${{ env.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.java-version }}
+          distribution: ${{ env.distribution }}
+          cache: 'maven'
+          cache-dependency-path: 'pom.xml'
+      - name: Check if is a SNAPSHOT version
+        run: |
+          if [[ $(mvn help:evaluate -Dexpression=project.version -q -DforceStdout) == *SNAPSHOT* ]]; then
+              echo "Verified is a SNAPSHOT version"
+          else
+              echo "Not a SNAPSHOT version"
+              exit 1
+          fi        
+      - name: Install GPG key
+        run: |
+          cat <(echo -e "${{ secrets.GPG_KEY }}") | gpg --batch --import
+          gpg --list-secret-keys --keyid-format LONG
+      - name: Configure Maven settings
+        uses: s4u/maven-settings-action@v2.6.0
+        with:
+          servers: |
+            [{
+              "id": "ossrh",
+              "username": "${{ secrets.OSSRH_USERNAME }}",
+              "password": "${{ secrets.OSSRH_PASSWORD }}"
+            }]
+      - name: Run the deploy goal with Maven
+        run: |
+          mvn --batch-mode deploy \
+          -PmavenRelease \
+          -DskipTests \
+          -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        timeout-minutes: 30
