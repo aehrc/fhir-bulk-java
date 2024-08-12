@@ -1,4 +1,4 @@
-# FHIR Bulk Java
+# FHIR Bulk Client for Java
 
 [![Test](https://github.com/aehrc/fhir-bulk-client/workflows/Verify/badge.svg)](https://github.com/aehrc/fhir-bulk-client/actions?query=workflow%3AVerify)
 
@@ -10,9 +10,8 @@ Supported features:
 
 - Fluent Java API for configuring and running the export
 - System, group and patient level export
-- All Bulk Data
-  v2 [query parameters](https://hl7.org/fhir/uv/bulkdata/export.html#query-parameters) (
-  with some limitations for patient references)
+- All Bulk Data v2 [query parameters](https://hl7.org/fhir/uv/bulkdata/export.html#query-parameters) 
+  (with some limitations for patient references)
 - Asymmetric and
   symmetric [SMART authentication profiles](https://www.hl7.org/fhir/smart-app-launch/client-authentication.html)
 - Automatic token endpoint discovery with SMART configuration discovery
@@ -25,25 +24,23 @@ Supported features:
 
 Limitations:
 
-- Only `reference` elements are supported in the `Reference` resource (see: '
-  patient' query parameter)
+- Only `reference` elements are supported in the `Reference` resource 
+  (see: `patient` query parameter)
 - Attachment references in downloaded resources are not downloaded
-- No support to request lenient processing at the server (Prefer:
-  handling=lenient)
+- No support to request lenient processing at the server 
+  (`Prefer: handling=lenient`)
 - `deleted` and `error` urls in the kick-off response are not downloaded
-- Downloaded files are NOT validated in any way (e.g. to contain encoded
-  resources of to contain the declared number of resources)
+- Downloaded files are NOT validated in any way
 
 ## Getting Started
 
-To use the FHIR Bulk Java client in your project, add the following dependency (
-replace `1.0.0` with the desired version):
+To use the FHIR Bulk Java client in your project, add the following dependency:
 
 ```xml
 <dependency>
     <groupId>au.csiro.fhir</groupId>
     <artifactId>bulk-export</artifactId>
-    <version>1.0.0</version>
+    <version>[desired version]</version>
 </dependency>
 ```
 
@@ -68,8 +65,8 @@ in common scenarios.
 
 Prerequisites:
 
-- Java 11 +
-- Maven 3 +
+- Java 11+
+- Maven 3+
 
 Build the project and run unit tests with:
 
@@ -82,52 +79,54 @@ mvn clean install
 ### Default system level export (unauthenticated)
 
 System level export with default settings form
-the https://bulk-data.smarthealthit.org/ demo server with unauthenticated
+the [demo server](https://bulk-data.smarthealthit.org/) with unauthenticated
 access. The exported files will be downloaded to the `output-dir` directory with
 the default `.ndjson` extension.
 
 ```java
-// the FHIR endpoint URL for https://bulk-data.smarthealthit.org/
+// The FHIR endpoint URL for https://bulk-data.smarthealthit.org/.
 final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
-// the directory where the exported files will be saved
+
+// The directory where the exported files will be saved.
 final String outputDir = "output-dir";
 
-// Build the client with a system level builder and run the export
+// Build the client with a system level builder and run the export.
 final BulkExportResult result = BulkExportClient.systemBuilder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
         .build()
         .export();
 
-// Examine the result
-result.getTransactonTime();
+// Examine the result.
+result.getTransactionTime();
 ```
 
 ### Fully customised group level export (unauthenticated)
 
 Group level export for the `'BMCHealthNet'` group with all supported export
 parameters (except
-for `patient`) from the https://bulk-data.smarthealthit.org/ demo server with
+for `patient`) from the [demo server](https://bulk-data.smarthealthit.org/) with
 unauthenticated access.
 
 Please note that properties such as `types` or `elements` which correspond to
 coma-delimited query parameters in
 the [bulk data kick-off reqeust specification](https://hl7.org/fhir/uv/bulkdata/export.html#bulk-data-kick-off-request)
-can accept both lists of objects (
-e.g. `withTypes(List.of("Patient","Condition"))`) and individual objects (
-e.g. `withType("Observation")`), all of which are combined to form the final
+can accept both lists of objects 
+(e.g. `withTypes(List.of("Patient","Condition"))`) and individual objects 
+(e.g. `withType("Observation")`), all of which are combined to form the final
 value.
 
 In this case the final value of the `_type` query parameter is
 to: `Patient,Condition,Observation`.
 
 ```java
-// the FHIR endpoint URL for https://bulk-data.smarthealthit.org/
+// The FHIR endpoint URL for https://bulk-data.smarthealthit.org/.
 final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
-// the directory where the exported files will be saved
+
+// The directory where the exported files will be saved.
 final String outputDir = "output-dir";
 
-// create a group level builder for 'BMCHealthNet' group
+// Create a group level builder for 'BMCHealthNet' group.
 final BulkExportResult result = BulkExportClient.groupBuilder("BMCHealthNet")
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
@@ -145,21 +144,21 @@ final BulkExportResult result = BulkExportClient.groupBuilder("BMCHealthNet")
 
 ### Patient level export with references (unauthenticated)
 
-Patient level export from the https://bulk-data.smarthealthit.org/ demo server
-with
-unauthenticated access and explicit set of Patient references to be included in
-the export.
+Patient level export from the
+[demo server](https://bulk-data.smarthealthit.org/) with unauthenticated access
+and explicit set of Patient references to be included in the export.
 
-Please note that currently only the `'reference'` element is supported in
+Please note that currently only the `reference` element is supported in
 the `Reference` resource.
 
 ```java
-// the FHIR endpoint URL for https://bulk-data.smarthealthit.org/
+// The FHIR endpoint URL for https://bulk-data.smarthealthit.org/.
 final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
-// the directory where the exported files will be saved
+
+// The directory where the exported files will be saved.
 final String outputDir = "output-dir";
 
-// create a patient level builder
+// Create a patient level builder.
 final BulkExportResult result = BulkExportClient.patientBuilder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
@@ -174,39 +173,40 @@ final BulkExportResult result = BulkExportClient.patientBuilder()
 ### Asymmetric authentication with JWK key
 
 Export with the asymmetric authentication. The asymmetric authentication profile
-is implicitly selected by setting
-the `privateKeyJWK` property in the `AuthConfig` object.
+is implicitly selected by setting the `privateKeyJWK` property in
+the `AuthConfig` object.
 
-- The `client id` needs to be obtained form the server and the `public key`
-  associated with the `private key` used for authentication needs to be
+- The client ID needs to be obtained from the server and the public key
+  associated with the private key used for authentication needs to be
   registered with the server beforehand.
-- The `private key` is provided to the client in the JSON Web Key (JWK) format
+- The private key is provided to the client in the JSON Web Key (JWK) format
   it needs to be compatible with one of the supported algorithms (e.g. `RS384`).
 - The client by default uses SMART configuration discovery to obtain the token
   endpoint from the FHIR endpoint.
 
 ```java
-// the authenticated FHIR endpoint URL for https://bulk-data.smarthealthit.org/
+// The authenticated FHIR endpoint URL for https://bulk-data.smarthealthit.org/.
 final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjAsInNlY3VyZSI6MX0/fhir";
-// the directory where the exported files will be saved
+
+// The directory where the exported files will be saved.
 final String outputDir = "output-dir";
 
-// The authentication parameters
-final String clientId = "eyJhbGciOiJIUzI..."; // the client ID from the bulk-data server
-final String privateKeyJWK = "{ "\"kty\":\"RSA\", ...}"; // the private key in the JSON Web Key format
+// The authentication parameters.
+final String clientId = "eyJhbGciOiJIUzI..."; // The client ID from the bulk-data server.
+final String privateKeyJWK = "{ "\"kty\":\"RSA\", ...}"; // The private key in the JSON Web Key format.
 
 // Create an authentication configuration, the asymmetric authentication profile 
 // is implicitly selected by setting the privateKeyJWK property.
 final AuthConfig authConfig = AuthConfig.builder()
         .enabled(true)
-        .useSMART(true) // use SMART configuration discovery (default)
+        .useSMART(true) // Use SMART configuration discovery (default).
         .clientId(clientId)
         .privateKeyJWK(privateKeyJWK)
         .scope("system/*.read")
         .tokenExpiryTolerance(30)
         .build();
 
-// use the system level builder with the authentication configuration
+// Use the system level builder with the authentication configuration.
 final BulkExportResult result = BulkExportClient.systemBuilder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
@@ -226,12 +226,13 @@ to `false` and the token endpoint is explicitly set in the `tokenEndpoint`
 property.
 
 ```java
-// the authenticated FHIR endpoint at CERNER
+// The authenticated FHIR endpoint at Cerner.
 final String fhirEndpointUrl = "https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d";
-// the directory where the exported files will be saved
+
+// The directory where the exported files will be saved.
 final String outputDir = "output-dir";
 
-// The authentication parameters
+// The authentication parameters.
 final String clientId = "4ccde388-...";
 final String clientSecret = "XYX.....";
 
@@ -239,7 +240,7 @@ final String clientSecret = "XYX.....";
 // is implicitly selected by setting the clientSecret property.
 final AuthConfig authConfig = AuthConfig.builder()
         .enabled(true)
-        .useSMART(false) // disable SMART configuration discovery and configure the token endpoint explicitly
+        .useSMART(false) // Disable SMART configuration discovery and configure the token endpoint explicitly.
         .tokenEndpoint(
                 "https://authorization.cerner.com/tenants/ec2458f2-1e24-41c8-b71b-0e701af7583d/protocols/oauth2/profiles/smart-v1/token")
         .clientId(clientId)
@@ -247,11 +248,11 @@ final AuthConfig authConfig = AuthConfig.builder()
         .scope("system/Patient.read")
         .build();
 
-// use the system level builder with the authentication configuration
+// Use the system level builder with the authentication configuration.
 final BulkExportResult result = BulkExportClient.systemBuilder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
-        .withAuthConfig(authConfig) // configure authentication in the client
+        .withAuthConfig(authConfig) // Configure authentication in the client.
         .build()
         .export();
 ```
@@ -261,31 +262,33 @@ final BulkExportResult result = BulkExportClient.systemBuilder()
 Various aspects of the client can be customised either directly in the builder
 or by providing a customised sub-configuration objects.
 
--  max concurrent downloads or export timeout can be set directly in the builder
+- Maximum concurrent downloads or export timeout can be set directly in the
+  builder
 - `AsyncConfig` - customise the asynchronous protocol configuration (e.g. max
   transient errors, max pooling delay)
 - `HttpClientConfig` - customise the HTTP client configuration (e.g. retry
   count, socket timeout)
 
 ```java
-// the FHIR endpoint URL for https://bulk-data.smarthealthit.org/
+// The FHIR endpoint URL for https://bulk-data.smarthealthit.org/.
 final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
-// the directory where the exported files will be saved
+
+// The directory where the exported files will be saved.
 final String outputDir = "output-dir";
 
-// Create a customised FHIR async protocol configuration
+// Create a customised FHIR async protocol configuration.
 final AsyncConfig asyncConfig = AsyncConfig.builder()
         .maxTransientErrors(5)
         .maxPoolingDelay(Duration.ofMinutes(5))
         .build();
 
-// Create a customised HTTP client configuration
+// Create a customised HTTP client configuration.
 final HttpClientConfig httpClientConfig = HttpClientConfig.builder()
         .retryCount(5)
         .socketTimeout(10_000)
         .build();
 
-// Build the client with a system level and customised run-time configuration
+// Build the client with a system level and customised run-time configuration.
 final BulkExportResult result = BulkExportClient.systemBuilder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
@@ -299,8 +302,8 @@ final BulkExportResult result = BulkExportClient.systemBuilder()
 
 ## Contributing
 
-Please read CONTRIBUTING.md for details on our code of conduct, and the process
-for submitting pull requests to us.
+Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of
+conduct, and the process for submitting pull requests to us.
 
 ## Licensing and attribution
 
