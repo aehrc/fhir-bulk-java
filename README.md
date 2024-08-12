@@ -1,6 +1,6 @@
 # FHIR Bulk Client for Java
 
-[![Test](https://github.com/aehrc/fhir-bulk-client/workflows/Verify/badge.svg)](https://github.com/aehrc/fhir-bulk-client/actions?query=workflow%3AVerify)
+[![Test](https://github.com/aehrc/fhir-bulk-java/workflows/Verify/badge.svg)](https://github.com/aehrc/fhir-bulk-java/actions?query=workflow%3AVerify)
 
 This project is a Java library with the API for the FHIR Bulk Export Client
 compatible with
