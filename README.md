@@ -110,7 +110,7 @@ unauthenticated access.
 
 Please note that properties such as `types` or `elements` which correspond to
 coma-delimited query parameters in
-the [bulk data kick-off reqeust specification](https://hl7.org/fhir/uv/bulkdata/export.html#bulk-data-kick-off-request)
+the [bulk data kick-off request specification](https://hl7.org/fhir/uv/bulkdata/export.html#bulk-data-kick-off-request)
 can accept both lists of objects 
 (e.g. `withTypes(List.of("Patient","Condition"))`) and individual objects 
 (e.g. `withType("Observation")`), all of which are combined to form the final
@@ -193,7 +193,7 @@ final String outputDir = "output-dir";
 
 // The authentication parameters.
 final String clientId = "eyJhbGciOiJIUzI..."; // The client ID from the bulk-data server.
-final String privateKeyJWK = "{ "\"kty\":\"RSA\", ...}"; // The private key in the JSON Web Key format.
+final String privateKeyJWK = "{ \"\"kty\":\"RSA\", ...}"; // The private key in the JSON Web Key format.
 
 // Create an authentication configuration, the asymmetric authentication profile 
 // is implicitly selected by setting the privateKeyJWK property.
