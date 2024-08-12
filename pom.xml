@@ -103,6 +103,7 @@
     <bulkExport.mockitoVersion>4.8.1</bulkExport.mockitoVersion>
     <bulkExport.jupyterVersion>5.9.1</bulkExport.jupyterVersion>
     <bulkExport.surefireVersion>3.1.2</bulkExport.surefireVersion>
+    <bulkExport.hadoopVersion>3.3.4</bulkExport.hadoopVersion>
     <version.jakarta.validation-api>3.0.2</version.jakarta.validation-api>
   </properties>
 
@@ -152,6 +153,13 @@
       <artifactId>nimbus-jose-jwt</artifactId>
     </dependency>
 
+    <!-- Optional -->
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client-api</artifactId>
+      <version>${bulkExport.hadoopVersion}</version>
+      <optional>true</optional>
+    </dependency>
     <!-- Testing -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -196,6 +204,13 @@
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- hadoop client runtime for testing -->
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client-runtime</artifactId>
+      <version>${bulkExport.hadoopVersion}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

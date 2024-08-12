@@ -62,7 +62,8 @@ class LocalFileStore implements FileStore {
 
     @Override
     public boolean mkdirs() {
-      return file.mkdirs();
+      file.mkdirs();
+      return true;
     }
 
     @Nonnull

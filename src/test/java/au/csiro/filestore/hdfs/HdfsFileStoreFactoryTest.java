@@ -15,30 +15,19 @@
  * limitations under the License.
  */
 
-package au.csiro.filestore;
+package au.csiro.filestore.hdfs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.io.File;
+import au.csiro.filestore.AbstractFileStoreFactoryTest;
+import au.csiro.filestore.FileStoreFactory;
 import java.io.IOException;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Tests for {@link LocalFileStore}.
+ * Tests for {@link HdfsFileStoreFactory}.
  */
-public class LocalFileStoreTest extends AbstractFileStoreFactoryTest {
+public class HdfsFileStoreFactoryTest extends AbstractFileStoreFactoryTest {
 
-  final FileStoreFactory fileStoreFactory = FileStoreFactory.getLocal();
+  final FileStoreFactory fileStoreFactory = new HdfsFileStoreFactory();
 
   @BeforeEach
   void setUp() throws IOException {
