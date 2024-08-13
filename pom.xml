@@ -23,7 +23,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>au.csiro.fhir</groupId>
-  <version>0.1.0-alpha</version>
+  <version>1.0.0</version>
   <artifactId>bulk-export</artifactId>
   <packaging>jar</packaging>
 
