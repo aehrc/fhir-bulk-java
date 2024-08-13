@@ -23,13 +23,14 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>au.csiro.fhir</groupId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0-alpha</version>
   <artifactId>bulk-export</artifactId>
   <packaging>jar</packaging>
 
   <name>FHIR Bulk Client</name>
   <description>Java client library for FHIR Bulk Export.</description>
-
+  <url>https://github.com/aehrc/fhir-bulk-java</url>
+  
   <developers>
     <developer>
       <name>John Grimes</name>
@@ -353,6 +354,15 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
         <version>3.3.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
