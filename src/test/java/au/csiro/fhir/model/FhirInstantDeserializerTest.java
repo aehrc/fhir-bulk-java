@@ -17,56 +17,42 @@
 
 package au.csiro.fhir.model;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonPrimitive;
-import org.junit.jupiter.api.Test;
-
 import java.time.Instant;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 class FhirInstantDeserializerTest {
 
 
   final FhirInstantDeserializer fhirInstantDeserializer = new FhirInstantDeserializer();
 
-  final static Instant TEST_INSTANT = Instant.parse("2023-01-02T00:01:02.123Z");
-  final static long TEST_INSTANT_EPOCH_MILLI = TEST_INSTANT.toEpochMilli();
-
   @Test
-  void deserializeFromMillsecondsValueAsNumber() {
-    assertEquals(TEST_INSTANT,
-        fhirInstantDeserializer.deserialize(new JsonPrimitive(TEST_INSTANT_EPOCH_MILLI),
-            Instant.class,
-            null));
-  }
-
-  @Test
-  void deserializeFromMillsecondsValueAsString() {
-    assertEquals(TEST_INSTANT,
-        fhirInstantDeserializer.deserialize(
-            new JsonPrimitive(String.valueOf(TEST_INSTANT_EPOCH_MILLI)), Instant.class,
-            null));
-  }
-
-
-  @Test
-  void deserializeFromFHIRStringValueWithZoneZ() {
+  void deserializeFromStringWithZoneZ() {
     assertEquals(Instant.parse("1971-10-12T01:02:03.123Z"),
         fhirInstantDeserializer.deserialize(new JsonPrimitive("1971-10-12T01:02:03.123Z"),
-            Instant.class,
-            null));
+            Instant.class, null));
   }
 
   @Test
-  void deserializeFromFHIRStringValueWithExplicitOffset() {
-    assertEquals(TEST_INSTANT,
+  void deserializeFromStringWithExplicitOffset() {
+    assertEquals(Instant.parse("2023-01-02T00:01:02.123Z"),
         fhirInstantDeserializer.deserialize(new JsonPrimitive("2023-01-02T01:31:02.123+01:30"),
-            Instant.class,
-            null));
+            Instant.class, null));
   }
-  
+
+
+  @Test
+  void deserializeFromStringWithNoMilliseconds() {
+    assertEquals(Instant.parse("2023-01-02T01:31:02Z"),
+        fhirInstantDeserializer.deserialize(new JsonPrimitive("2023-01-02T01:31:02Z"),
+            Instant.class, null));
+  }
+
   @Test
   void deserializeFromInvalidPrimitive() {
     final JsonParseException ex = assertThrows(JsonParseException.class,
@@ -79,6 +65,14 @@ class FhirInstantDeserializerTest {
     final JsonParseException ex = assertThrows(JsonParseException.class,
         () -> fhirInstantDeserializer.deserialize(new JsonArray(0), Instant.class, null));
     assertEquals("Failed to parse Instant from non-primitive: []", ex.getMessage());
+  }
+
+  @Test
+  void deserializeFromStringWithInsufficientPrecision() {
+    final JsonParseException ex = assertThrows(JsonParseException.class,
+        () -> fhirInstantDeserializer.deserialize(new JsonPrimitive("2023-01-02T01:31Z"),
+            Instant.class, null));
+    assertEquals("Failed to parse Instant from string: \"2023-01-02T01:31Z\"", ex.getMessage());
   }
 
 }
