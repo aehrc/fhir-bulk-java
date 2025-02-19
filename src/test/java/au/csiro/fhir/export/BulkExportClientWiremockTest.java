@@ -81,7 +81,7 @@ class BulkExportClientWiremockTest {
       ))
       .toString();
   public static final String BULK_EXPORT_NO_FILES_RESPONSE = new JSONObject()
-      .put("transactionTime", 4934344343L)
+      .put("transactionTime", "1970-02-27T12:39:04.343Z")
       .put("request", "http://localhost:8080/$export")
       .put("requiresAccessToken", false)
       .put("output", new JSONArray())
@@ -90,7 +90,7 @@ class BulkExportClientWiremockTest {
   public static String bulkExportResponse_3_files(
       @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
     return new JSONObject()
-        .put("transactionTime", "4934344343")
+        .put("transactionTime", "1970-02-27T12:39:04.343Z")
         .put("request", "http://localhost:8080/$export")
         .put("requiresAccessToken", false)
         .put("output", new JSONArray()
@@ -589,7 +589,7 @@ class BulkExportClientWiremockTest {
         .whenScenarioStateIs("done")
         .willReturn(aResponse().withStatus(200).withBody(
             new JSONObject()
-                .put("transactionTime", 4934344343L)
+                .put("transactionTime", "1970-02-27T12:39:04.343Z")
                 .put("request", "http://localhost:8080/$export")
                 .put("requiresAccessToken", false)
                 .put("output", new JSONArray()
@@ -681,7 +681,7 @@ class BulkExportClientWiremockTest {
         .whenScenarioStateIs("done")
         .willReturn(aResponse().withStatus(200).withBody(
             new JSONObject()
-                .put("transactionTime", 4934344343L)
+                .put("transactionTime", "1970-02-27T12:39:04.343Z")
                 .put("request", "http://localhost:8080/$export")
                 .put("requiresAccessToken", false)
                 .put("output", new JSONArray()
