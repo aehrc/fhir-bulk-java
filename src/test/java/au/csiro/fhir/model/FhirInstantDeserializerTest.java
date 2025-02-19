@@ -17,14 +17,14 @@
 
 package au.csiro.fhir.model;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonPrimitive;
-import org.junit.jupiter.api.Test;
-
 import java.time.Instant;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 class FhirInstantDeserializerTest {
 
@@ -66,7 +66,15 @@ class FhirInstantDeserializerTest {
             Instant.class,
             null));
   }
-  
+
+
+  @Test
+  void deserializeFromFHIRStringValueWithNoMilliseconds() {
+    assertEquals(Instant.parse("2023-01-02T01:31:02Z"),
+        fhirInstantDeserializer.deserialize(new JsonPrimitive("2023-01-02T01:31:02Z"),
+            Instant.class, null));
+  }
+
   @Test
   void deserializeFromInvalidPrimitive() {
     final JsonParseException ex = assertThrows(JsonParseException.class,
