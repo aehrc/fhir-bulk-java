@@ -44,15 +44,7 @@ class FhirInstantDeserializer implements JsonDeserializer<Instant> {
       throw new JsonParseException("Failed to parse Instant from non-primitive: " + json);
     }
     final JsonPrimitive primitive = json.getAsJsonPrimitive();
-    if (primitive.isNumber()) {
-      return Instant.ofEpochMilli(primitive.getAsLong());
-    } else if (primitive.isString()) {
-      try {
-        return Instant.ofEpochMilli(Long.parseLong(primitive.getAsString()));
-      } catch (final NumberFormatException __) {
-        // Not a number
-        // Continue to try to parse as a FHIR instan.
-      }
+    if (primitive.isString()) {
       try {
         return parseFhirInstant(primitive.getAsString());
       } catch (final DateTimeParseException dex) {

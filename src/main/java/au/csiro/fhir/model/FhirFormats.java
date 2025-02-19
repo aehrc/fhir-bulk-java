@@ -32,7 +32,7 @@ public class FhirFormats {
   private static final ZoneId UTC_ZONE_ID = ZoneId.of("UTC");
 
   private static final DateTimeFormatter FHIR_INSTANT_FORMAT = DateTimeFormatter
-      .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX").withZone(UTC_ZONE_ID);
+      .ofPattern("yyyy-MM-dd'T'HH:mm:ss[.SSS]XXX").withZone(UTC_ZONE_ID);
 
   /**
    * Formats an {@link Instant} as a FHIR instant string.
