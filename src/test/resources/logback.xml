@@ -32,6 +32,7 @@
     <appender-ref ref="TIMING"/>
   </logger>
   <logger level="DEBUG" name="au.csiro"/>
+  <!-- set to DEBUG to enable logging of HTTP client wire data -->
   <logger level="ERROR" name="org.apache.http.wire"/>
   <root level="WARN">
     <appender-ref ref="STDOUT"/>

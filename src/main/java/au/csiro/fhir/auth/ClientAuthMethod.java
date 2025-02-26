@@ -20,6 +20,7 @@ package au.csiro.fhir.auth;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.http.JsonResponseHandler;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -27,9 +28,9 @@ import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import au.csiro.http.JsonResponseHandler;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.Consts;
 import org.apache.http.Header;
 import org.apache.http.HttpHeaders;
 import org.apache.http.NameValuePair;
@@ -39,7 +40,6 @@ import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.HTTP;
 
 /**
  * Authentication method for one of the FHIR SMART client authentication profiles.
@@ -210,7 +210,7 @@ public abstract class ClientAuthMethod {
       params.add(new BasicNameValuePair(PARAM_SCOPE, getScope()));
     }
     params.addAll(getAuthParams());
-    request.setEntity(new UrlEncodedFormEntity(params, HTTP.DEF_CONTENT_CHARSET));
+    request.setEntity(new UrlEncodedFormEntity(params, Consts.UTF_8));
     return request;
   }
 

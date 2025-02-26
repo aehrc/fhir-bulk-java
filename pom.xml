@@ -30,7 +30,7 @@
   <name>FHIR Bulk Client</name>
   <description>Java client library for FHIR Bulk Export.</description>
   <url>https://github.com/aehrc/fhir-bulk-java</url>
-  
+
   <developers>
     <developer>
       <name>John Grimes</name>
@@ -207,6 +207,12 @@
       <artifactId>logback-classic</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- required to enable httpclient logging -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
+      <scope>test</scope>
+    </dependency>
     <!-- hadoop client runtime for testing -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -310,6 +316,11 @@
         <groupId>ch.qos.logback</groupId>
         <artifactId>logback-core</artifactId>
         <version>${bulkExport.logbackVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jcl-over-slf4j</artifactId>
+        <version>${bulkExport.slf4jVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.junit.jupiter</groupId>
