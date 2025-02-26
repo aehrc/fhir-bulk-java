@@ -201,6 +201,7 @@ public abstract class ClientAuthMethod {
     final HttpPost request = new HttpPost(getTokenEndpoint());
     request.addHeader(HttpHeaders.ACCEPT, "application/json");
     request.addHeader(HttpHeaders.CACHE_CONTROL, "no-cache");
+    request.addHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
     getAuthHeaders().forEach(request::addHeader);
 
     final List<NameValuePair> params = new ArrayList<>();
