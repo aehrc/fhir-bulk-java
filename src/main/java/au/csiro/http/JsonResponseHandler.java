@@ -68,11 +68,15 @@ public class JsonResponseHandler<T> implements ResponseHandler<T> {
    */
   @Override
   public T handleResponse(final HttpResponse response) throws IOException {
-
     final int statusCode = response.getStatusLine().getStatusCode();
     if (statusCode == HttpStatus.SC_OK) {
       return produceResponse(response);
     } else {
+      // Log error response before throwing exception
+      String errorBody = Optional.ofNullable(response.getEntity())
+          .flatMap(this::quietBodyAsString)
+          .orElse("<no body>");
+      log.error("Request failed with status {}: {}", statusCode, errorBody);
       throw new ClientProtocolException("Unexpected status code: " + statusCode);
     }
   }
