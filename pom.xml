@@ -68,6 +68,20 @@
     <url>https://github.com/aehrc/fhir-bulk-java/actions</url>
   </ciManagement>
 
+  <repositories>
+    <!-- Required for resolving SNAPSHOT dependencies from Maven Central. -->
+    <repository>
+      <id>central-snapshots</id>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
