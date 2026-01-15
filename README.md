@@ -10,8 +10,9 @@ Supported features:
 
 - Fluent Java API for configuring and running the export
 - System, group and patient level export
-- All Bulk Data v2 [query parameters](https://hl7.org/fhir/uv/bulkdata/export.html#query-parameters) 
+- Bulk Data v2 [query parameters](https://hl7.org/fhir/uv/bulkdata/export.html#query-parameters)
   (with some limitations for patient references)
+- Bulk Data v3 `_until` query parameter
 - Asymmetric and
   symmetric [SMART authentication profiles](https://www.hl7.org/fhir/smart-app-launch/client-authentication.html)
 - Automatic token endpoint discovery with SMART configuration discovery
@@ -132,6 +133,7 @@ final BulkExportResult result = BulkExportClient.groupBuilder("BMCHealthNet")
         .withOutputDir(outputDir)
         .withOutputFormat("ndjson")
         .withSince(Instant.parse("2015-01-01T00:00:00.000Z"))
+        .withUntil(Instant.parse("2024-01-01T00:00:00.000Z"))
         .withTypes(List.of("Patient", "Condition"))
         .withType("Observation")
         .withElements(List.of("id", "status"))

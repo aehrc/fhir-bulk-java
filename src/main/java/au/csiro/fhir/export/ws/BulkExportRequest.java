@@ -150,10 +150,19 @@ public class BulkExportRequest {
 
   /**
    * The date and time to use as the lower bound for the export. The value of the '_since' query
+   * parameter.
    */
   @Nullable
   @Builder.Default
   Instant _since = null;
+
+  /**
+   * The date and time to use as the upper bound for the export. The value of the '_until' query
+   * parameter.
+   */
+  @Nullable
+  @Builder.Default
+  Instant _until = null;
 
   /**
    * The types of resources to export. The value of the '_type' query parameter.
@@ -208,6 +217,8 @@ public class BulkExportRequest {
                 .map(s -> Parameter.of("_outputFormat", s)).stream(),
             Optional.ofNullable(_since)
                 .map(s -> Parameter.of("_since", s)).stream(),
+            Optional.ofNullable(_until)
+                .map(u -> Parameter.of("_until", u)).stream(),
             optionalOfList(_type)
                 .map(e -> Parameter.of("_type", String.join(",", e))).stream(),
             optionalOfList(_elements)
@@ -241,6 +252,10 @@ public class BulkExportRequest {
     if (get_since() != null) {
       uriBuilder.addParameter("_since",
           FhirFormats.formatFhirInstant(Objects.requireNonNull(get_since())));
+    }
+    if (get_until() != null) {
+      uriBuilder.addParameter("_until",
+          FhirFormats.formatFhirInstant(Objects.requireNonNull(get_until())));
     }
     if (!get_type().isEmpty()) {
       uriBuilder.addParameter("_type", String.join(",", get_type()));
