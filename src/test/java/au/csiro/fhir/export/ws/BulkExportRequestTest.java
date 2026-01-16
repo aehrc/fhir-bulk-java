@@ -49,6 +49,7 @@ class BulkExportRequestTest {
     final BulkExportRequest request = BulkExportRequest.builder()
         ._outputFormat("fhir+ndjson")
         ._since(Instant.parse("2023-08-01T00:00:00Z"))
+        ._until(Instant.parse("2023-12-31T23:59:59Z"))
         ._type(List.of("Patient", "Condition"))
         ._elements(List.of("Patient.name", "Patient.birthDate"))
         ._typeFilter(List.of("Patient?active=true", "Condition?clinicalStatus=active"))
@@ -60,12 +61,26 @@ class BulkExportRequestTest {
         Parameters.of(
             Parameter.of("_outputFormat", "fhir+ndjson"),
             Parameter.of("_since", Instant.parse("2023-08-01T00:00:00Z")),
+            Parameter.of("_until", Instant.parse("2023-12-31T23:59:59Z")),
             Parameter.of("_type", "Patient,Condition"),
             Parameter.of("_elements", "Patient.name,Patient.birthDate"),
             Parameter.of("_typeFilter", "Patient?active=true,Condition?clinicalStatus=active"),
             Parameter.of("includeAssociatedData", "LatestProvenanceResources,_customXXX"),
             Parameter.of("patient", Reference.of("Patient/00")),
             Parameter.of("patient", Reference.of("Patient/01"))
+        ),
+        request.toParameters());
+  }
+
+  @Test
+  void testToParametersWithOnlyUntil() {
+    // Test that _until can be used independently of _since.
+    final BulkExportRequest request = BulkExportRequest.builder()
+        ._until(Instant.parse("2024-06-15T12:00:00.500Z"))
+        .build();
+    assertEquals(
+        Parameters.of(
+            Parameter.of("_until", Instant.parse("2024-06-15T12:00:00.500Z"))
         ),
         request.toParameters());
   }
@@ -81,10 +96,12 @@ class BulkExportRequestTest {
   @Test
   void testNonDefaultRequestUri() {
     final URI baseUri = URI.create("http://test.com/fhir");
-    final Instant testInstant = Instant.parse("2023-01-11T00:00:00.1234Z");
+    final Instant sinceInstant = Instant.parse("2023-01-11T00:00:00.1234Z");
+    final Instant untilInstant = Instant.parse("2023-12-31T23:59:59.9876Z");
     assertEquals(URI.create(
             "http://test.com/fhir?_outputFormat=xml"
                 + "&_since=2023-01-11T00%3A00%3A00.123Z"
+                + "&_until=2023-12-31T23%3A59%3A59.987Z"
                 + "&_type=Patient%2CObservation"
                 + "&_elements=Patient.id%2CCondition.status"
                 + "&_typeFilter=Patient.active%3Dtrue%2CObservation.status%3Dfinal"
@@ -94,9 +111,23 @@ class BulkExportRequestTest {
             ._type(List.of("Patient", "Observation"))
             ._elements(List.of("Patient.id", "Condition.status"))
             ._typeFilter(List.of("Patient.active=true", "Observation.status=final"))
-            ._since(testInstant)
+            ._since(sinceInstant)
+            ._until(untilInstant)
             .includeAssociatedData(List.of(AssociatedData.RELEVANT_PROVENANCE_RESOURCES,
                 AssociatedData.custom("customYYY")))
+            .build().toRequestURI(baseUri)
+    );
+  }
+
+  @Test
+  void testRequestUriWithOnlyUntil() {
+    // Test that _until can be used independently in URI without _since.
+    final URI baseUri = URI.create("http://test.com/fhir");
+    final Instant untilInstant = Instant.parse("2024-06-15T12:00:00.500Z");
+    assertEquals(URI.create(
+            "http://test.com/fhir?_until=2024-06-15T12%3A00%3A00.500Z"),
+        BulkExportRequest.builder()
+            ._until(untilInstant)
             .build().toRequestURI(baseUri)
     );
   }
@@ -118,13 +149,15 @@ class BulkExportRequestTest {
 
   @Test
   void testCreatesAllValuesSystemExportRequest() {
-    final Instant testInstant = Instant.parse("2023-01-11T00:00:00.1234Z");
+    final Instant sinceInstant = Instant.parse("2023-01-11T00:00:00.1234Z");
+    final Instant untilInstant = Instant.parse("2023-12-31T23:59:59.9876Z");
     final BulkExportRequest request = BulkExportRequest.builder()
         ._outputFormat("xml")
         ._type(List.of("Patient", "Observation"))
         ._elements(List.of("Patient.id", "Condition.status"))
         ._typeFilter(List.of("Patient.active=true", "Observation.status=final"))
-        ._since(testInstant)
+        ._since(sinceInstant)
+        ._until(untilInstant)
         .includeAssociatedData(List.of(AssociatedData.LATEST_PROVENANCE_RESOURCES,
             AssociatedData.custom("customZZZ")))
         .build();
@@ -132,6 +165,7 @@ class BulkExportRequestTest {
     assertEquals("GET", httpRequest.getMethod());
     assertEquals("http://test.com/fhir/$export?_outputFormat=xml"
             + "&_since=2023-01-11T00%3A00%3A00.123Z"
+            + "&_until=2023-12-31T23%3A59%3A59.987Z"
             + "&_type=Patient%2CObservation"
             + "&_elements=Patient.id%2CCondition.status"
             + "&_typeFilter=Patient.active%3Dtrue%2CObservation.status%3Dfinal"
@@ -219,6 +253,7 @@ class BulkExportRequestTest {
         .level(new GroupLevel("id0001"))
         ._outputFormat("fhir+ndjson")
         ._since(Instant.parse("2023-08-01T00:00:00Z"))
+        ._until(Instant.parse("2023-12-31T23:59:59Z"))
         ._type(List.of("Patient", "Condition"))
         ._elements(List.of("Patient.name", "Patient.birthDate"))
         ._typeFilter(List.of("Patient?active=true", "Condition?clinicalStatus=active"))
@@ -241,6 +276,7 @@ class BulkExportRequestTest {
         Parameters.of(
             Parameter.of("_outputFormat", "fhir+ndjson"),
             Parameter.of("_since", Instant.parse("2023-08-01T00:00:00Z")),
+            Parameter.of("_until", Instant.parse("2023-12-31T23:59:59Z")),
             Parameter.of("_type", "Patient,Condition"),
             Parameter.of("_elements", "Patient.name,Patient.birthDate"),
             Parameter.of("_typeFilter", "Patient?active=true,Condition?clinicalStatus=active"),

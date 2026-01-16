@@ -707,14 +707,14 @@ class BulkExportClientWiremockTest {
 
     stubFor(get(urlPathEqualTo("/file/00"))
         .willReturn(aResponse()
-            .withFixedDelay(2_000)
+            .withFixedDelay(10_000)
             .withStatus(200)
             .withBody(RESOURCE_00))
     );
 
     stubFor(get(urlPathEqualTo("/file/01"))
         .willReturn(aResponse()
-            .withFixedDelay(2_000)
+            .withFixedDelay(10_000)
             .withStatus(200)
             .withBody(RESOURCE_01))
     );
@@ -736,7 +736,7 @@ class BulkExportClientWiremockTest {
             BulkExportClient.builder()
                 .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
                 .withOutputDir(exportDir.getPath())
-                .withTimeout(Duration.ofSeconds(3))
+                .withTimeout(Duration.ofSeconds(5))
                 .build()
                 .export()
     );

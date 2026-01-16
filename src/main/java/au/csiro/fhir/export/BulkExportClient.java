@@ -118,6 +118,14 @@ public class BulkExportClient {
   Instant since = null;
 
   /**
+   * The time to end the export at. If null, the server's current time is used. The value of the
+   * `_until` parameter in the export request.
+   */
+  @Nullable
+  @Builder.Default
+  Instant until = null;
+
+  /**
    * The types of resources to export. The value of the `_type` parameter in the export request.
    */
   @Nonnull
@@ -355,6 +363,7 @@ public class BulkExportClient {
         ._outputFormat(outputFormat)
         ._type(types)
         ._since(since)
+        ._until(until)
         ._elements(elements)
         ._typeFilter(typeFilters)
         .includeAssociatedData(includeAssociatedData)
