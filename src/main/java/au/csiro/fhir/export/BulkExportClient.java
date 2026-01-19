@@ -174,11 +174,12 @@ public class BulkExportClient {
   String outputDir;
 
   /**
-   * The extension to use for the output files.
+   * The extension to use for the output files. When set, this overrides the extension that would
+   * otherwise be inferred from the output format. When null, the extension is inferred from the
+   * output format.
    */
-  @Nonnull
-  @Builder.Default
-  String outputExtension = "ndjson";
+  @Nullable
+  String outputExtension;
 
   /**
    * The maximum time to wait for the export to complete. If zero or negative (default), the export
@@ -411,11 +412,14 @@ public class BulkExportClient {
    * Derives the appropriate file extension from a MIME type or format string.
    *
    * @param format the MIME type or format string (e.g., "application/fhir+ndjson", "parquet")
-   * @param fallback the extension to use if the format is not recognised
+   * @param override if non-null, this extension is used instead of inferring from the format
    * @return the file extension without a leading dot (e.g., "ndjson", "parquet")
    */
   @Nonnull
-  static String extensionFromFormat(@Nonnull final String format, @Nonnull final String fallback) {
+  static String extensionFromFormat(@Nonnull final String format, @Nullable final String override) {
+    if (override != null) {
+      return override;
+    }
     final String normalised = format.toLowerCase().trim();
     if (normalised.equals("application/fhir+ndjson")
         || normalised.equals("application/x-ndjson")
@@ -425,7 +429,7 @@ public class BulkExportClient {
         || normalised.equals("parquet")) {
       return "parquet";
     } else {
-      return fallback;
+      return "ndjson";
     }
   }
 

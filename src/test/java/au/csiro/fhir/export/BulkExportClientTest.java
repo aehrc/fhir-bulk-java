@@ -74,7 +74,7 @@ public class BulkExportClientTest {
 
   @Test
   void testMapsDifferentResourceToSeparateFiles() {
-    // When using an unknown output format, the outputExtension fallback should be used.
+    // When outputExtension is explicitly set, it should override the inferred extension.
     final BulkExportClient client = BulkExportClient.builder()
         .withFhirEndpointUrl("http://example.com")
         .withOutputDir("output-dir")
@@ -133,49 +133,92 @@ public class BulkExportClientTest {
   void testExtensionFromFormatReturnsNdjsonForStandardMimeType() {
     // The standard FHIR Bulk Data MIME type should produce ndjson extension.
     assertEquals("ndjson",
-        BulkExportClient.extensionFromFormat("application/fhir+ndjson", "fallback"));
+        BulkExportClient.extensionFromFormat("application/fhir+ndjson", null));
   }
 
   @Test
   void testExtensionFromFormatReturnsNdjsonForAlternativeMimeType() {
     // The alternative NDJSON MIME type should also produce ndjson extension.
     assertEquals("ndjson",
-        BulkExportClient.extensionFromFormat("application/x-ndjson", "fallback"));
+        BulkExportClient.extensionFromFormat("application/x-ndjson", null));
   }
 
   @Test
   void testExtensionFromFormatReturnsNdjsonForShortForm() {
     // The short form "ndjson" should produce ndjson extension.
-    assertEquals("ndjson", BulkExportClient.extensionFromFormat("ndjson", "fallback"));
+    assertEquals("ndjson", BulkExportClient.extensionFromFormat("ndjson", null));
   }
 
   @Test
   void testExtensionFromFormatReturnsParquetForMimeType() {
     // The Parquet MIME type should produce parquet extension.
     assertEquals("parquet",
-        BulkExportClient.extensionFromFormat("application/vnd.apache.parquet", "fallback"));
+        BulkExportClient.extensionFromFormat("application/vnd.apache.parquet", null));
   }
 
   @Test
   void testExtensionFromFormatReturnsParquetForShortForm() {
     // The short form "parquet" should produce parquet extension.
-    assertEquals("parquet", BulkExportClient.extensionFromFormat("parquet", "fallback"));
+    assertEquals("parquet", BulkExportClient.extensionFromFormat("parquet", null));
   }
 
   @Test
-  void testExtensionFromFormatReturnsFallbackForUnknownFormat() {
-    // Unknown formats should return the fallback extension.
-    assertEquals("fallback",
-        BulkExportClient.extensionFromFormat("application/unknown", "fallback"));
+  void testExtensionFromFormatReturnsNdjsonForUnknownFormat() {
+    // Unknown formats should return the default ndjson extension when no override is set.
+    assertEquals("ndjson",
+        BulkExportClient.extensionFromFormat("application/unknown", null));
   }
 
   @Test
   void testExtensionFromFormatIsCaseInsensitive() {
     // Format matching should be case-insensitive.
     assertEquals("ndjson",
-        BulkExportClient.extensionFromFormat("APPLICATION/FHIR+NDJSON", "fallback"));
+        BulkExportClient.extensionFromFormat("APPLICATION/FHIR+NDJSON", null));
     assertEquals("parquet",
-        BulkExportClient.extensionFromFormat("APPLICATION/VND.APACHE.PARQUET", "fallback"));
+        BulkExportClient.extensionFromFormat("APPLICATION/VND.APACHE.PARQUET", null));
+  }
+
+  @Test
+  void testExtensionFromFormatReturnsOverrideWhenSet() {
+    // When an override is explicitly set, it should be used regardless of the format.
+    assertEquals("custom",
+        BulkExportClient.extensionFromFormat("application/fhir+ndjson", "custom"));
+    assertEquals("custom",
+        BulkExportClient.extensionFromFormat("application/vnd.apache.parquet", "custom"));
+    assertEquals("custom",
+        BulkExportClient.extensionFromFormat("application/unknown", "custom"));
+  }
+
+  @Test
+  void testUnknownFormatDefaultsToNdjsonExtension() {
+    // A client configured with an unknown format and no explicit outputExtension should
+    // default to ndjson file extensions.
+    final BulkExportClient unknownFormatClient = BulkExportClient.builder()
+        .withFhirEndpointUrl("http://example.com")
+        .withOutputDir("output-dir")
+        .withOutputFormat("application/x-custom")
+        .build();
+
+    final BulkExportResponse response = BulkExportResponse.builder()
+        .transactionTime(Instant.now())
+        .request("fake-request")
+        .output(List.of(
+            new FileItem("Patient", "http:/foo.bar/1", 10)
+        ))
+        .deleted(Collections.emptyList())
+        .error(Collections.emptyList())
+        .build();
+
+    final List<UrlDownloadEntry> downloadUrls = unknownFormatClient.getUrlDownloadEntries(
+        response, FileHandle.ofLocal("output-dir"));
+
+    assertEquals(
+        List.of(
+            new UrlDownloadEntry(URI.create("http:/foo.bar/1"),
+                FileHandle.ofLocal("output-dir/Patient.0000.ndjson"))
+        ),
+        downloadUrls
+    );
   }
 
   @Test
