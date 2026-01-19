@@ -74,10 +74,11 @@ public class BulkExportClientTest {
 
   @Test
   void testMapsDifferentResourceToSeparateFiles() {
-
+    // When using an unknown output format, the outputExtension fallback should be used.
     final BulkExportClient client = BulkExportClient.builder()
         .withFhirEndpointUrl("http://example.com")
         .withOutputDir("output-dir")
+        .withOutputFormat("application/x-custom")
         .withOutputExtension("xjson")
         .build();
 
@@ -126,5 +127,88 @@ public class BulkExportClientTest {
                 AssociatedData.custom("customXXX"), AssociatedData.custom("customYYY")))
             .build(),
         client.buildBulkExportRequest());
+  }
+
+  @Test
+  void testExtensionFromFormatReturnsNdjsonForStandardMimeType() {
+    // The standard FHIR Bulk Data MIME type should produce ndjson extension.
+    assertEquals("ndjson",
+        BulkExportClient.extensionFromFormat("application/fhir+ndjson", "fallback"));
+  }
+
+  @Test
+  void testExtensionFromFormatReturnsNdjsonForAlternativeMimeType() {
+    // The alternative NDJSON MIME type should also produce ndjson extension.
+    assertEquals("ndjson",
+        BulkExportClient.extensionFromFormat("application/x-ndjson", "fallback"));
+  }
+
+  @Test
+  void testExtensionFromFormatReturnsNdjsonForShortForm() {
+    // The short form "ndjson" should produce ndjson extension.
+    assertEquals("ndjson", BulkExportClient.extensionFromFormat("ndjson", "fallback"));
+  }
+
+  @Test
+  void testExtensionFromFormatReturnsParquetForMimeType() {
+    // The Parquet MIME type should produce parquet extension.
+    assertEquals("parquet",
+        BulkExportClient.extensionFromFormat("application/vnd.apache.parquet", "fallback"));
+  }
+
+  @Test
+  void testExtensionFromFormatReturnsParquetForShortForm() {
+    // The short form "parquet" should produce parquet extension.
+    assertEquals("parquet", BulkExportClient.extensionFromFormat("parquet", "fallback"));
+  }
+
+  @Test
+  void testExtensionFromFormatReturnsFallbackForUnknownFormat() {
+    // Unknown formats should return the fallback extension.
+    assertEquals("fallback",
+        BulkExportClient.extensionFromFormat("application/unknown", "fallback"));
+  }
+
+  @Test
+  void testExtensionFromFormatIsCaseInsensitive() {
+    // Format matching should be case-insensitive.
+    assertEquals("ndjson",
+        BulkExportClient.extensionFromFormat("APPLICATION/FHIR+NDJSON", "fallback"));
+    assertEquals("parquet",
+        BulkExportClient.extensionFromFormat("APPLICATION/VND.APACHE.PARQUET", "fallback"));
+  }
+
+  @Test
+  void testParquetFormatProducesParquetFileExtensions() {
+    // A client configured with Parquet format should produce .parquet file extensions.
+    final BulkExportClient parquetClient = BulkExportClient.builder()
+        .withFhirEndpointUrl("http://example.com")
+        .withOutputDir("output-dir")
+        .withOutputFormat("application/vnd.apache.parquet")
+        .build();
+
+    final BulkExportResponse response = BulkExportResponse.builder()
+        .transactionTime(Instant.now())
+        .request("fake-request")
+        .output(List.of(
+            new FileItem("Patient", "http:/foo.bar/1", 10),
+            new FileItem("Observation", "http:/foo.bar/2", 10)
+        ))
+        .deleted(Collections.emptyList())
+        .error(Collections.emptyList())
+        .build();
+
+    final List<UrlDownloadEntry> downloadUrls = parquetClient.getUrlDownloadEntries(
+        response, FileHandle.ofLocal("output-dir"));
+
+    assertEquals(
+        List.of(
+            new UrlDownloadEntry(URI.create("http:/foo.bar/1"),
+                FileHandle.ofLocal("output-dir/Patient.0000.parquet")),
+            new UrlDownloadEntry(URI.create("http:/foo.bar/2"),
+                FileHandle.ofLocal("output-dir/Observation.0000.parquet"))
+        ),
+        downloadUrls
+    );
   }
 }
