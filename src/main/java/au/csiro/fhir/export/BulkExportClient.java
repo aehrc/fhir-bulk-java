@@ -174,11 +174,12 @@ public class BulkExportClient {
   String outputDir;
 
   /**
-   * The extension to use for the output files.
+   * The extension to use for the output files. When set, this overrides the extension that would
+   * otherwise be inferred from the output format. When null, the extension is inferred from the
+   * output format.
    */
-  @Nonnull
-  @Builder.Default
-  String outputExtension = "ndjson";
+  @Nullable
+  String outputExtension;
 
   /**
    * The maximum time to wait for the export to complete. If zero or negative (default), the export
@@ -390,11 +391,12 @@ public class BulkExportClient {
         Collectors.groupingBy(BulkExportResponse.FileItem::getType, LinkedHashMap::new,
             mapping(BulkExportResponse.FileItem::getUrl, toList())));
 
+    final String extension = extensionFromFormat(outputFormat, outputExtension);
     return urlsByType.entrySet().stream()
         .flatMap(entry -> IntStream.range(0, entry.getValue().size())
             .mapToObj(index -> new UrlDownloadEntry(
                     URI.create(entry.getValue().get(index)),
-                    destinationDir.child(toFileName(entry.getKey(), index, outputExtension))
+                    destinationDir.child(toFileName(entry.getKey(), index, extension))
                 )
             )
         ).collect(Collectors.toUnmodifiableList());
@@ -404,6 +406,31 @@ public class BulkExportClient {
   static String toFileName(@Nonnull final String resource, final int chunkNo,
       @Nonnull final String extension) {
     return String.format("%s.%04d.%s", resource, chunkNo, extension);
+  }
+
+  /**
+   * Derives the appropriate file extension from a MIME type or format string.
+   *
+   * @param format the MIME type or format string (e.g., "application/fhir+ndjson", "parquet")
+   * @param override if non-null, this extension is used instead of inferring from the format
+   * @return the file extension without a leading dot (e.g., "ndjson", "parquet")
+   */
+  @Nonnull
+  static String extensionFromFormat(@Nonnull final String format, @Nullable final String override) {
+    if (override != null) {
+      return override;
+    }
+    final String normalised = format.toLowerCase().trim();
+    if (normalised.equals("application/fhir+ndjson")
+        || normalised.equals("application/x-ndjson")
+        || normalised.equals("ndjson")) {
+      return "ndjson";
+    } else if (normalised.equals("application/vnd.apache.parquet")
+        || normalised.equals("parquet")) {
+      return "parquet";
+    } else {
+      return "ndjson";
+    }
   }
 
   @Nonnull
