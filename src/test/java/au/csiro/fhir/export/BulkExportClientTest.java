@@ -28,6 +28,8 @@ import au.csiro.fhir.export.ws.BulkExportResponse;
 import au.csiro.fhir.export.ws.BulkExportResponse.FileItem;
 import au.csiro.filestore.FileStore.FileHandle;
 import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -310,10 +312,16 @@ public class BulkExportClientTest {
         .error(Collections.emptyList())
         .build();
 
-    final List<UrlDownloadEntry> entries = client.getUrlDownloadEntries(
-        response, FileHandle.ofLocal("output-dir"));
+    final FileHandle outputDir = FileHandle.ofLocal("output-dir");
+    final List<UrlDownloadEntry> entries = client.getUrlDownloadEntries(response, outputDir);
 
+    // The destination must be a direct child of the staging directory, with the URL-encoded
+    // sequence preserved as a single filename component (i.e. not decoded into traversal).
     assertEquals(1, entries.size());
-    assertTrue(entries.get(0).getDestination().getLocation().contains("output-dir"));
+    final Path expected = Paths.get("output-dir", "..%2f..%2fsecret.0000.ndjson");
+    final Path actual = Paths.get(entries.get(0).getDestination().getLocation());
+    assertEquals(expected, actual);
+    assertEquals(Paths.get("output-dir").toAbsolutePath().normalize(),
+        actual.toAbsolutePath().normalize().getParent());
   }
 }
