@@ -281,6 +281,26 @@ public class BulkExportClientTest {
   }
 
   @Test
+  void testRejectsTypeWithBackslashPathTraversal() {
+    // Backslash separators must be rejected so that traversal sequences are not exploitable on
+    // Windows, where the file system treats backslashes as path separators.
+    final BulkExportResponse response = BulkExportResponse.builder()
+        .transactionTime(Instant.now())
+        .request("fake-request")
+        .output(List.of(
+            new FileItem("..\\..\\secret", "http:/foo.bar/1", 10)
+        ))
+        .deleted(Collections.emptyList())
+        .error(Collections.emptyList())
+        .build();
+
+    final BulkExportException ex = assertThrows(BulkExportException.class,
+        () -> client.getUrlDownloadEntries(response, FileHandle.ofLocal("output-dir")));
+
+    assertTrue(ex.getMessage().contains("invalid path separators"));
+  }
+
+  @Test
   void testRejectsTypeWithAbsolutePath() {
     // A manifest type resolving to an absolute path must be rejected with the absolute-path
     // message specifically (the absolute-path check runs before the separator check).
