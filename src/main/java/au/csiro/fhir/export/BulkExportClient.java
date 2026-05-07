@@ -58,6 +58,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -435,12 +436,26 @@ public class BulkExportClient {
         return false;
       }
     }
-    // For non-file schemes, use a conservative string prefix check on normalised URIs.
-    String parentStr = parentUri.normalize().toString();
-    if (!parentStr.endsWith("/")) {
-      parentStr = parentStr + "/";
+    // For non-file schemes, compare the structural components of the URI (scheme, authority and
+    // path) and ignore any query or fragment that the URI may carry.
+    if (!Objects.equals(parentUri.getScheme(), childUri.getScheme())
+        || !Objects.equals(parentUri.getAuthority(), childUri.getAuthority())) {
+      return false;
     }
-    return childUri.normalize().toString().startsWith(parentStr);
+    final String parentPath = normalisePath(parentUri.getPath());
+    final String childPath = normalisePath(childUri.getPath());
+    final String parentDir = parentPath.endsWith("/") ? parentPath : parentPath + "/";
+    return childPath.startsWith(parentDir);
+  }
+
+  @Nonnull
+  private static String normalisePath(@Nullable final String rawPath) {
+    if (rawPath == null || rawPath.isEmpty()) {
+      return "/";
+    }
+    // Use a synthetic file: URI to leverage URI normalisation, which collapses dot-segments
+    // without altering the path's structure.
+    return URI.create("file://" + rawPath).normalize().getPath();
   }
 
   @Nonnull
