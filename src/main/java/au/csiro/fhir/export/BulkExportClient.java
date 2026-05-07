@@ -401,6 +401,12 @@ public class BulkExportClient {
         .flatMap(entry -> IntStream.range(0, entry.getValue().size())
             .mapToObj(index -> {
                 final String fileName = toFileName(entry.getKey(), index, extension);
+                // Three layered checks defend against a malicious manifest type. The first two
+                // catch the common attack shapes (absolute paths and embedded separators)
+                // early so that failures point at the specific problem in the manifest. The
+                // descendant check is the ultimate safety net for any escape that slips
+                // through, including via FileHandle implementations whose child() resolution
+                // differs from naive concatenation.
                 if (isAbsoluteFileName(fileName)) {
                   throw new BulkExportException(
                       "Manifest file type resolves to an absolute path: "
