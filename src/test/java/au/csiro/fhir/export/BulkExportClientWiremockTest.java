@@ -63,6 +63,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import wiremock.net.minidev.json.JSONArray;
 
+/**
+ * WireMock-based tests for {@link BulkExportClient}.
+ *
+ * @author Piotr Szul
+ * @author John Grimes
+ */
 @WireMockTest
 class BulkExportClientWiremockTest {
 

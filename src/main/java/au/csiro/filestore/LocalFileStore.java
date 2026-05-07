@@ -31,6 +31,9 @@ import javax.annotation.Nonnull;
 
 /**
  * An implementation of {@link FileStore} that uses the local filesystem.
+ *
+ * @author Piotr Szul
+ * @author John Grimes
  */
 class LocalFileStore implements FileStore {
 

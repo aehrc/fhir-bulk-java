@@ -84,6 +84,8 @@ import org.hibernate.validator.constraints.URL;
  * A client for the FHIR Bulk Data Export API.
  *
  * @see <a href="https://build.fhir.org/ig/HL7/bulk-data/export.html">FHIR Bulk Export</a>
+ * @author Piotr Szul
+ * @author John Grimes
  */
 @Value
 @Slf4j

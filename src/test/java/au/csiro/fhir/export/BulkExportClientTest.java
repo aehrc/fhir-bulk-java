@@ -38,6 +38,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link BulkExportClient}.
+ *
+ * @author Piotr Szul
+ * @author John Grimes
  */
 public class BulkExportClientTest {
 

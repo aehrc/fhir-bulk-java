@@ -13,8 +13,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * @author John Grimes
  */
 
 package au.csiro.filestore;
@@ -34,6 +32,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link LocalFileStore}.
+ *
+ * @author Piotr Szul
+ * @author John Grimes
  */
 public class LocalFileStoreTest extends AbstractFileStoreFactoryTest {
 
