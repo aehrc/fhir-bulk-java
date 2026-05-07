@@ -50,6 +50,7 @@ import com.google.common.base.Charsets;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -885,6 +886,14 @@ class BulkExportClientWiremockTest {
     );
     assertTrue(ex.getMessage().contains("Manifest file type"));
     assertNotMarkedSuccess(exportDir);
+
+    // The manifest type "../../secret" with the chunk and extension suffix would resolve to a
+    // sibling of the target directory if the traversal had succeeded. Assert that no such file
+    // appears, which directly disproves the published PoC's exfiltration claim.
+    final Path escapeTarget = exportDir.toPath().toAbsolutePath()
+        .resolve("../../secret.0000.ndjson").normalize();
+    assertFalse(Files.exists(escapeTarget),
+        "File written outside staging directory: " + escapeTarget);
 
     // check that cleanup was called
     verify(1, deleteRequestedFor(urlPathEqualTo("/pool")));
