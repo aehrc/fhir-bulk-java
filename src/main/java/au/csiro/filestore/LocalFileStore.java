@@ -20,11 +20,13 @@ package au.csiro.filestore;
 import lombok.Value;
 import org.apache.commons.io.IOUtils;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.StandardOpenOption;
 import javax.annotation.Nonnull;
 
 /**
@@ -86,7 +88,11 @@ class LocalFileStore implements FileStore {
 
     @Override
     public long writeAll(@Nonnull final InputStream is) throws IOException {
-      try (final OutputStream os = new FileOutputStream(file)) {
+      // Open with CREATE_NEW to refuse to overwrite any pre-existing entry, and NOFOLLOW_LINKS
+      // so that a pre-placed symlink at the destination is not followed to a target outside the
+      // staging directory.
+      try (final OutputStream os = Files.newOutputStream(file.toPath(),
+          StandardOpenOption.CREATE_NEW, LinkOption.NOFOLLOW_LINKS)) {
         return IOUtils.copyLarge(is, os);
       }
     }
