@@ -51,6 +51,8 @@ import com.google.common.collect.Streams;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -394,12 +396,51 @@ public class BulkExportClient {
     final String extension = extensionFromFormat(outputFormat, outputExtension);
     return urlsByType.entrySet().stream()
         .flatMap(entry -> IntStream.range(0, entry.getValue().size())
-            .mapToObj(index -> new UrlDownloadEntry(
+            .mapToObj(index -> {
+                final String fileName = toFileName(entry.getKey(), index, extension);
+                if (fileName.indexOf('/') >= 0 || fileName.indexOf('\\') >= 0) {
+                  throw new BulkExportException(
+                      "Manifest file type contains invalid path separators: "
+                          + entry.getKey());
+                }
+                final FileHandle destinationFile = destinationDir.child(fileName);
+                validateDescendant(destinationDir, destinationFile);
+                return new UrlDownloadEntry(
                     URI.create(entry.getValue().get(index)),
-                    destinationDir.child(toFileName(entry.getKey(), index, extension))
-                )
-            )
+                    destinationFile
+                );
+            })
         ).collect(Collectors.toUnmodifiableList());
+  }
+
+  private static void validateDescendant(@Nonnull final FileHandle parent,
+      @Nonnull final FileHandle child) {
+    if (!isDescendant(parent, child)) {
+      throw new BulkExportException(
+          "Manifest file type results in a destination outside the output directory: "
+              + child.getLocation());
+    }
+  }
+
+  private static boolean isDescendant(@Nonnull final FileHandle parent,
+      @Nonnull final FileHandle child) {
+    final URI parentUri = parent.toUri();
+    final URI childUri = child.toUri();
+    if ("file".equals(parentUri.getScheme()) && "file".equals(childUri.getScheme())) {
+      try {
+        final Path parentPath = Paths.get(parentUri).toAbsolutePath().normalize();
+        final Path childPath = Paths.get(childUri).toAbsolutePath().normalize();
+        return childPath.startsWith(parentPath);
+      } catch (final Exception e) {
+        return false;
+      }
+    }
+    // For non-file schemes, use a conservative string prefix check on normalised URIs.
+    String parentStr = parentUri.normalize().toString();
+    if (!parentStr.endsWith("/")) {
+      parentStr = parentStr + "/";
+    }
+    return childUri.normalize().toString().startsWith(parentStr);
   }
 
   @Nonnull

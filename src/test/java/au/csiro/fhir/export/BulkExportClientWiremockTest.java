@@ -832,6 +832,65 @@ class BulkExportClientWiremockTest {
   }
 
   @Test
+  void testExportFailsOnPoisonedManifestType(@Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
+
+    stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
+
+    stubFor(get(urlPathEqualTo("/$export"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs(STARTED)
+        .willReturn(
+            aResponse().withStatus(202)
+                .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
+        .willSetStateTo("done")
+    );
+
+    stubFor(delete(urlPathEqualTo("/pool"))
+        .willReturn(aResponse().withStatus(202))
+    );
+
+    stubFor(get(urlPathEqualTo("/pool"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs("done")
+        .willReturn(aResponse().withStatus(200).withBody(
+            new JSONObject()
+                .put("transactionTime", "1970-02-27T12:39:04.343Z")
+                .put("request", "http://localhost:8080/$export")
+                .put("requiresAccessToken", false)
+                .put("output", new JSONArray()
+                    .appendElement(new JSONObject()
+                        .put("type", "../../secret")
+                        .put("url", wmRuntimeInfo.getHttpBaseUrl() + "/file/00")
+                        .put("count", 2)
+                    )
+                )
+                .toString()
+        ))
+    );
+
+    stubFor(get(urlPathEqualTo("/file/00"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withBody(RESOURCE_00))
+    );
+
+    final File exportDir = getRandomExportLocation();
+
+    final BulkExportException ex = Assertions.assertThrows(BulkExportException.class, () ->
+        BulkExportClient.builder()
+            .withFhirEndpointUrl(wmRuntimeInfo.getHttpBaseUrl())
+            .withOutputDir(exportDir.getPath())
+            .build()
+            .export()
+    );
+    assertTrue(ex.getMessage().contains("Manifest file type"));
+    assertNotMarkedSuccess(exportDir);
+
+    // check that cleanup was called
+    verify(1, deleteRequestedFor(urlPathEqualTo("/pool")));
+  }
+
+  @Test
   void testExportWorksWithSMARTSymmetricAuthenticationForKickOffAndDownloadRefreshingExpiredTokens(
       @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) throws IOException {
 

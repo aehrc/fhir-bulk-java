@@ -18,6 +18,8 @@
 package au.csiro.fhir.export;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.fhir.export.download.UrlDownloadTemplate.UrlDownloadEntry;
 import au.csiro.fhir.export.ws.AssociatedData;
@@ -253,5 +255,65 @@ public class BulkExportClientTest {
         ),
         downloadUrls
     );
+  }
+
+  @Test
+  void testRejectsTypeWithPathTraversal() {
+    // A manifest type containing directory traversal sequences must be rejected.
+    final BulkExportResponse response = BulkExportResponse.builder()
+        .transactionTime(Instant.now())
+        .request("fake-request")
+        .output(List.of(
+            new FileItem("Patient", "http:/foo.bar/1", 10),
+            new FileItem("../../../secret", "http:/foo.bar/2", 10)
+        ))
+        .deleted(Collections.emptyList())
+        .error(Collections.emptyList())
+        .build();
+
+    final BulkExportException ex = assertThrows(BulkExportException.class,
+        () -> client.getUrlDownloadEntries(response, FileHandle.ofLocal("output-dir")));
+
+    assertTrue(ex.getMessage().contains("Manifest file type"));
+  }
+
+  @Test
+  void testRejectsTypeWithAbsolutePath() {
+    // A manifest type resolving to an absolute path must be rejected.
+    final BulkExportResponse response = BulkExportResponse.builder()
+        .transactionTime(Instant.now())
+        .request("fake-request")
+        .output(List.of(
+            new FileItem("/etc/passwd", "http:/foo.bar/1", 10)
+        ))
+        .deleted(Collections.emptyList())
+        .error(Collections.emptyList())
+        .build();
+
+    final BulkExportException ex = assertThrows(BulkExportException.class,
+        () -> client.getUrlDownloadEntries(response, FileHandle.ofLocal("output-dir")));
+
+    assertTrue(ex.getMessage().contains("Manifest file type"));
+  }
+
+  @Test
+  void testConfinesTypeWithUrlEncodedTraversal() {
+    // URL-encoded traversal sequences in the type field are not decoded by the local file
+    // system, so the resulting file remains inside the output directory.
+    final BulkExportResponse response = BulkExportResponse.builder()
+        .transactionTime(Instant.now())
+        .request("fake-request")
+        .output(List.of(
+            new FileItem("..%2f..%2fsecret", "http:/foo.bar/1", 10)
+        ))
+        .deleted(Collections.emptyList())
+        .error(Collections.emptyList())
+        .build();
+
+    final List<UrlDownloadEntry> entries = client.getUrlDownloadEntries(
+        response, FileHandle.ofLocal("output-dir"));
+
+    assertEquals(1, entries.size());
+    assertTrue(entries.get(0).getDestination().getLocation().contains("output-dir"));
   }
 }
