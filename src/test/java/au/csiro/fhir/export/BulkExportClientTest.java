@@ -277,12 +277,13 @@ public class BulkExportClientTest {
     final BulkExportException ex = assertThrows(BulkExportException.class,
         () -> client.getUrlDownloadEntries(response, FileHandle.ofLocal("output-dir")));
 
-    assertTrue(ex.getMessage().contains("Manifest file type"));
+    assertTrue(ex.getMessage().contains("invalid path separators"));
   }
 
   @Test
   void testRejectsTypeWithAbsolutePath() {
-    // A manifest type resolving to an absolute path must be rejected.
+    // A manifest type resolving to an absolute path must be rejected with the absolute-path
+    // message specifically (the absolute-path check runs before the separator check).
     final BulkExportResponse response = BulkExportResponse.builder()
         .transactionTime(Instant.now())
         .request("fake-request")
@@ -296,7 +297,8 @@ public class BulkExportClientTest {
     final BulkExportException ex = assertThrows(BulkExportException.class,
         () -> client.getUrlDownloadEntries(response, FileHandle.ofLocal("output-dir")));
 
-    assertTrue(ex.getMessage().contains("Manifest file type"));
+    assertTrue(ex.getMessage().contains("absolute path"),
+        "Expected absolute-path rejection but got: " + ex.getMessage());
   }
 
   @Test

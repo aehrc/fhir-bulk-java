@@ -399,6 +399,11 @@ public class BulkExportClient {
         .flatMap(entry -> IntStream.range(0, entry.getValue().size())
             .mapToObj(index -> {
                 final String fileName = toFileName(entry.getKey(), index, extension);
+                if (isAbsoluteFileName(fileName)) {
+                  throw new BulkExportException(
+                      "Manifest file type resolves to an absolute path: "
+                          + entry.getKey());
+                }
                 if (fileName.indexOf('/') >= 0 || fileName.indexOf('\\') >= 0) {
                   throw new BulkExportException(
                       "Manifest file type contains invalid path separators: "
@@ -412,6 +417,17 @@ public class BulkExportClient {
                 );
             })
         ).collect(Collectors.toUnmodifiableList());
+  }
+
+  private static boolean isAbsoluteFileName(@Nonnull final String fileName) {
+    // A platform-independent check for absolute paths. Wrapped in a try/catch because on some
+    // platforms (notably Windows) certain characters cause Paths.get to throw; in that case we
+    // conservatively treat the input as unsafe.
+    try {
+      return Paths.get(fileName).isAbsolute();
+    } catch (final java.nio.file.InvalidPathException e) {
+      return true;
+    }
   }
 
   private static void validateDescendant(@Nonnull final FileHandle parent,
