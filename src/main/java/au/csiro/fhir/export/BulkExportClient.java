@@ -51,6 +51,7 @@ import com.google.common.collect.Streams;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -456,7 +457,9 @@ public class BulkExportClient {
         final Path parentPath = Paths.get(parentUri).toAbsolutePath().normalize();
         final Path childPath = Paths.get(childUri).toAbsolutePath().normalize();
         return childPath.startsWith(parentPath);
-      } catch (final Exception e) {
+      } catch (final IllegalArgumentException | FileSystemNotFoundException e) {
+        log.debug("Could not resolve file URI for descendant check; "
+            + "treating as non-descendant. parent={}, child={}", parentUri, childUri, e);
         return false;
       }
     }
