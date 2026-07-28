@@ -882,7 +882,12 @@ class BulkExportClientWiremockTest {
             .withBody(RESOURCE_00))
     );
 
-    final File exportDir = getRandomExportLocation();
+    // The output directory is nested two levels inside this test's own scratch directory, so that
+    // the two levels of traversal in the manifest type land inside it rather than somewhere shared.
+    // The parent of the escape target exists (the client creates the output directory before
+    // fetching the manifest), so the traversal would still succeed if it were not rejected.
+    final File scratchDir = getRandomExportLocation();
+    final File exportDir = new File(scratchDir, "nested/output");
 
     final ProtocolError ex = Assertions.assertThrows(ProtocolError.class, () ->
         BulkExportClient.builder()
@@ -896,10 +901,12 @@ class BulkExportClientWiremockTest {
     assertNotMarkedSuccess(exportDir);
 
     // The manifest type "../../secret" with the chunk and extension suffix would resolve to a
-    // sibling of the output directory if the traversal had succeeded, so assert that no such file
-    // appears.
+    // sibling of the output directory's parent if the traversal had succeeded, so assert that no
+    // such file appears.
     final Path escapeTarget = exportDir.toPath().toAbsolutePath()
         .resolve("../../secret.0000.ndjson").normalize();
+    assertEquals(scratchDir.toPath().toAbsolutePath().resolve("secret.0000.ndjson"), escapeTarget,
+        "The escape target must stay inside this test's scratch directory");
     assertFalse(Files.exists(escapeTarget),
         "File written outside output directory: " + escapeTarget);
 

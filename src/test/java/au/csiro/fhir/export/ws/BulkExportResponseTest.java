@@ -171,6 +171,18 @@ public class BulkExportResponseTest {
   }
 
   @Test
+  void testRejectsParsedManifestWithNullEntryInOutput() {
+    final BulkExportResponse response = parse("{"
+        + "\"transactionTime\": \"2023-01-01T00:00:00.000Z\","
+        + "\"request\": \"fake-request\","
+        + "\"output\": [{\"type\": \"Patient\", \"url\": \"https://foo.bar/1\"}, null]"
+        + "}");
+
+    final ProtocolError ex = assertThrows(ProtocolError.class, response::validate);
+    assertEquals("Manifest 'output' contains a null entry", ex.getMessage());
+  }
+
+  @Test
   void testRejectsParsedManifestWithMissingType() {
     final BulkExportResponse response = parse("{"
         + "\"transactionTime\": \"2023-01-01T00:00:00.000Z\","

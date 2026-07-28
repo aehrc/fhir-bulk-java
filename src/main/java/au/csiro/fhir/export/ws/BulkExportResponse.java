@@ -23,9 +23,11 @@ import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.Builder;
 import lombok.Value;
 
@@ -38,6 +40,18 @@ import lombok.Value;
 @Value
 @Builder
 public class BulkExportResponse implements AsyncResponse {
+
+  /**
+   * The pattern that a manifest file type must match to be accepted as a FHIR resource type name.
+   * A character class is used rather than the FHIR {@code ResourceType} value set because custom
+   * resource types are legal FHIR and the value set is version specific.
+   */
+  private static final Pattern RESOURCE_TYPE_PATTERN = Pattern.compile("[A-Za-z][A-Za-z0-9]{0,63}");
+
+  /**
+   * The URL schemes that a manifest file url may use.
+   */
+  private static final Set<String> ALLOWED_URL_SCHEMES = Set.of("http", "https");
 
   /**
    * Indicates the server's time when the query is run. The 'transactionTime' response value.
@@ -79,18 +93,6 @@ public class BulkExportResponse implements AsyncResponse {
   List<FileItem> error = Collections.emptyList();
 
   /**
-   * The pattern that a manifest file type must match to be accepted as a FHIR resource type name.
-   * A character class is used rather than the FHIR {@code ResourceType} value set because custom
-   * resource types are legal FHIR and the value set is version specific.
-   */
-  private static final Pattern RESOURCE_TYPE_PATTERN = Pattern.compile("[A-Za-z][A-Za-z0-9]{0,63}");
-
-  /**
-   * The URL schemes that a manifest file url may use.
-   */
-  private static final Set<String> ALLOWED_URL_SCHEMES = Set.of("http", "https");
-
-  /**
    * Validates the server supplied values that this client consumes.
    * <p>
    * The response is deserialised reflectively, which bypasses the constructor and does not honour
@@ -113,7 +115,12 @@ public class BulkExportResponse implements AsyncResponse {
     output.forEach(BulkExportResponse::validateFileItem);
   }
 
-  private static void validateFileItem(@Nonnull final FileItem fileItem) {
+  private static void validateFileItem(@Nullable final FileItem fileItem) {
+    // A JSON null in the output array deserialises to a null element, which has to be rejected
+    // here so that a malformed manifest surfaces as a ProtocolError rather than as an NPE.
+    if (fileItem == null) {
+      throw new ProtocolError("Manifest 'output' contains a null entry");
+    }
     final String type = fileItem.getType();
     if (type == null || !RESOURCE_TYPE_PATTERN.matcher(type).matches()) {
       throw new ProtocolError("Manifest 'type' is not a valid FHIR resource type name: " + type);
@@ -129,7 +136,7 @@ public class BulkExportResponse implements AsyncResponse {
       throw new ProtocolError("Manifest 'url' is not a valid URI: " + url, ex);
     }
     final String scheme = uri.getScheme();
-    if (scheme == null || !ALLOWED_URL_SCHEMES.contains(scheme.toLowerCase())) {
+    if (scheme == null || !ALLOWED_URL_SCHEMES.contains(scheme.toLowerCase(Locale.ROOT))) {
       throw new ProtocolError("Manifest 'url' has an unsupported scheme: " + url);
     }
   }

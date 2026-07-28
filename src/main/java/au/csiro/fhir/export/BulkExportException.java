@@ -186,7 +186,7 @@ public class BulkExportException extends RuntimeException {
      * @param message the detail message.
      * @param cause the cause.
      */
-    public DownloadError(@Nonnull final String message, final Throwable cause) {
+    public DownloadError(@Nonnull final String message, @Nonnull final Throwable cause) {
       super(message, cause);
     }
   }
