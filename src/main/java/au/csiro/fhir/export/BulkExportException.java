@@ -206,5 +206,15 @@ public class BulkExportException extends RuntimeException {
     public ProtocolError(@Nonnull final String message) {
       super(message);
     }
+
+    /**
+     * Constructs a new exception with the specified detail message and cause
+     *
+     * @param message the detailed message
+     * @param cause the cause of the exception
+     */
+    public ProtocolError(@Nonnull final String message, @Nonnull final Throwable cause) {
+      super(message, cause);
+    }
   }
 }

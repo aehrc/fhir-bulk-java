@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.fhir.auth.AuthConfig;
 import au.csiro.fhir.export.BulkExportException.HttpError;
+import au.csiro.fhir.export.BulkExportException.ProtocolError;
 import au.csiro.fhir.model.Reference;
 import au.csiro.fhir.export.ws.AssociatedData;
 import au.csiro.fhir.export.ws.BulkExportRequest;
@@ -883,23 +884,27 @@ class BulkExportClientWiremockTest {
 
     final File exportDir = getRandomExportLocation();
 
-    final BulkExportException ex = Assertions.assertThrows(BulkExportException.class, () ->
+    final ProtocolError ex = Assertions.assertThrows(ProtocolError.class, () ->
         BulkExportClient.builder()
             .withFhirEndpointUrl(wmRuntimeInfo.getHttpBaseUrl())
             .withOutputDir(exportDir.getPath())
             .build()
             .export()
     );
-    assertTrue(ex.getMessage().contains("Manifest file type"));
+    assertEquals("Manifest 'type' is not a valid FHIR resource type name: ../../secret",
+        ex.getMessage());
     assertNotMarkedSuccess(exportDir);
 
     // The manifest type "../../secret" with the chunk and extension suffix would resolve to a
-    // sibling of the target directory if the traversal had succeeded. Assert that no such file
-    // appears, which directly disproves the published PoC's exfiltration claim.
+    // sibling of the output directory if the traversal had succeeded, so assert that no such file
+    // appears.
     final Path escapeTarget = exportDir.toPath().toAbsolutePath()
         .resolve("../../secret.0000.ndjson").normalize();
     assertFalse(Files.exists(escapeTarget),
-        "File written outside staging directory: " + escapeTarget);
+        "File written outside output directory: " + escapeTarget);
+
+    // No download should have been attempted for the rejected entry.
+    verify(0, getRequestedFor(urlPathEqualTo("/file/00")));
 
     // check that cleanup was called
     verify(1, deleteRequestedFor(urlPathEqualTo("/pool")));

@@ -18,14 +18,18 @@
 package au.csiro.filestore;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import javax.annotation.Nonnull;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,36 +50,74 @@ public class LocalFileStoreTest extends AbstractFileStoreFactoryTest {
   }
 
   @Test
-  void writeAllRefusesToFollowSymlinkAtDestination() throws IOException {
-    // A pre-placed symlink at the destination must not be followed; otherwise an attacker who
-    // could plant a symlink in the staging directory could redirect downloads to arbitrary files.
-    final Path target = testRootDir.resolve("target.txt");
-    Files.writeString(target, "original");
-    final Path link = testRootDir.resolve("link.txt");
-    try {
-      Files.createSymbolicLink(link, target);
-    } catch (final UnsupportedOperationException | FileSystemException e) {
-      // Skip on platforms that disallow symlink creation (e.g. Windows without privilege).
-      assumeTrue(false, "Symbolic links are not supported in this environment.");
-    }
+  void testWriteAllRefusesToOverwriteExistingFile() throws IOException {
+    final Path existing = testRootDir.resolve("existing.txt");
+    Files.writeString(existing, "original");
 
-    assertThrows(IOException.class, () -> fileStore.get(link.toString())
+    assertThrows(FileAlreadyExistsException.class, () -> fileStore.get(existing.toString())
         .writeAll(IOUtils.toInputStream("payload", StandardCharsets.UTF_8)));
 
-    // The symlink target must remain unchanged.
+    assertEquals("original", Files.readString(existing));
+  }
+
+  @Test
+  void testWriteAllRefusesToWriteOverSymlinkAtDestination() throws IOException {
+    // A symlink already present under the name of a file about to be written is an existing entry
+    // as far as CREATE_NEW is concerned, so it is refused rather than followed to its target.
+    final Path target = testRootDir.resolve("target.txt");
+    Files.writeString(target, "original");
+    final Path link = createSymbolicLink(testRootDir.resolve("link.txt"), target);
+
+    assertThrows(FileAlreadyExistsException.class, () -> fileStore.get(link.toString())
+        .writeAll(IOUtils.toInputStream("payload", StandardCharsets.UTF_8)));
+
     assertEquals("original", Files.readString(target));
   }
 
   @Test
-  void writeAllRefusesToOverwriteExistingFile() throws IOException {
-    // CREATE_NEW prevents accidental or malicious overwrites of existing files in the staging
-    // directory.
-    final Path existing = testRootDir.resolve("existing.txt");
-    Files.writeString(existing, "original");
+  void testWriteAllWorksThroughSymlinkedParentDirectory() throws IOException {
+    // Reaching other storage through a symlinked directory is a legitimate layout, so symlinks
+    // above the file being written must still be followed.
+    final Path storageDir = Files.createDirectory(testRootDir.resolve("storage"));
+    final Path linkedDir = createSymbolicLink(testRootDir.resolve("linked"), storageDir);
 
-    assertThrows(IOException.class, () -> fileStore.get(existing.toString())
-        .writeAll(IOUtils.toInputStream("payload", StandardCharsets.UTF_8)));
+    fileStore.get(linkedDir.resolve("Patient.0000.ndjson").toString())
+        .writeAll(IOUtils.toInputStream("payload", StandardCharsets.UTF_8));
 
-    assertEquals("original", Files.readString(existing));
+    assertEquals("payload", Files.readString(storageDir.resolve("Patient.0000.ndjson")));
+  }
+
+  @Test
+  void testMkdirsSucceedsWhenDirectoryAlreadyExists() throws IOException {
+    // File.mkdirs() returns false for an existing directory, which must not be reported as a
+    // failure to create it.
+    final Path existing = Files.createDirectory(testRootDir.resolve("existing-dir"));
+
+    assertTrue(fileStore.get(existing.toString()).mkdirs());
+  }
+
+  @Test
+  void testMkdirsFailsWhenDirectoryCannotBeCreated() throws IOException {
+    // A dangling symlink is neither creatable as a directory nor already one, so mkdirs() has to
+    // report the failure rather than let the export proceed against a directory that is not there.
+    final Path dangling = createSymbolicLink(testRootDir.resolve("dangling"),
+        testRootDir.resolve("absent"));
+
+    assertFalse(fileStore.get(dangling.toString()).mkdirs());
+  }
+
+  /**
+   * Creates a symbolic link, skipping the calling test on platforms that do not permit it.
+   */
+  @Nonnull
+  private static Path createSymbolicLink(@Nonnull final Path link, @Nonnull final Path target)
+      throws IOException {
+    try {
+      return Files.createSymbolicLink(link, target);
+    } catch (final UnsupportedOperationException | FileSystemException ex) {
+      // Skip on platforms that disallow symlink creation (e.g. Windows without privilege).
+      assumeTrue(false, "Symbolic links are not supported in this environment.");
+      throw new AssertionError("unreachable");
+    }
   }
 }

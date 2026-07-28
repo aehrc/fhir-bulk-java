@@ -51,15 +51,11 @@ import com.google.common.collect.Streams;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.FileSystemNotFoundException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -398,91 +394,16 @@ public class BulkExportClient {
             mapping(BulkExportResponse.FileItem::getUrl, toList())));
 
     final String extension = extensionFromFormat(outputFormat, outputExtension);
+    // The manifest is validated in BulkExportTemplate before it reaches here, which guarantees
+    // that each type is a FHIR resource type name and so cannot escape the destination directory.
     return urlsByType.entrySet().stream()
         .flatMap(entry -> IntStream.range(0, entry.getValue().size())
-            .mapToObj(index -> {
-                final String fileName = toFileName(entry.getKey(), index, extension);
-                // Three layered checks defend against a malicious manifest type. The first two
-                // catch the common attack shapes (absolute paths and embedded separators)
-                // early so that failures point at the specific problem in the manifest. The
-                // descendant check is the ultimate safety net for any escape that slips
-                // through, including via FileHandle implementations whose child() resolution
-                // differs from naive concatenation.
-                if (isAbsoluteFileName(fileName)) {
-                  throw new BulkExportException(
-                      "Manifest file type resolves to an absolute path: "
-                          + entry.getKey());
-                }
-                if (fileName.indexOf('/') >= 0 || fileName.indexOf('\\') >= 0) {
-                  throw new BulkExportException(
-                      "Manifest file type contains invalid path separators: "
-                          + entry.getKey());
-                }
-                final FileHandle destinationFile = destinationDir.child(fileName);
-                validateDescendant(destinationDir, destinationFile);
-                return new UrlDownloadEntry(
+            .mapToObj(index -> new UrlDownloadEntry(
                     URI.create(entry.getValue().get(index)),
-                    destinationFile
-                );
-            })
+                    destinationDir.child(toFileName(entry.getKey(), index, extension))
+                )
+            )
         ).collect(Collectors.toUnmodifiableList());
-  }
-
-  private static boolean isAbsoluteFileName(@Nonnull final String fileName) {
-    // A platform-independent check for absolute paths. Wrapped in a try/catch because on some
-    // platforms (notably Windows) certain characters cause Paths.get to throw; in that case we
-    // conservatively treat the input as unsafe.
-    try {
-      return Paths.get(fileName).isAbsolute();
-    } catch (final java.nio.file.InvalidPathException e) {
-      return true;
-    }
-  }
-
-  private static void validateDescendant(@Nonnull final FileHandle parent,
-      @Nonnull final FileHandle child) {
-    if (!isDescendant(parent, child)) {
-      throw new BulkExportException(
-          "Manifest file type results in a destination outside the output directory: "
-              + child.getLocation());
-    }
-  }
-
-  private static boolean isDescendant(@Nonnull final FileHandle parent,
-      @Nonnull final FileHandle child) {
-    final URI parentUri = parent.toUri();
-    final URI childUri = child.toUri();
-    if ("file".equals(parentUri.getScheme()) && "file".equals(childUri.getScheme())) {
-      try {
-        final Path parentPath = Paths.get(parentUri).toAbsolutePath().normalize();
-        final Path childPath = Paths.get(childUri).toAbsolutePath().normalize();
-        return childPath.startsWith(parentPath);
-      } catch (final IllegalArgumentException | FileSystemNotFoundException e) {
-        log.debug("Could not resolve file URI for descendant check; "
-            + "treating as non-descendant. parent={}, child={}", parentUri, childUri, e);
-        return false;
-      }
-    }
-    // For non-file schemes, compare the structural components of the URI (scheme, authority and
-    // path) and ignore any query or fragment that the URI may carry.
-    if (!Objects.equals(parentUri.getScheme(), childUri.getScheme())
-        || !Objects.equals(parentUri.getAuthority(), childUri.getAuthority())) {
-      return false;
-    }
-    final String parentPath = normalisePath(parentUri.getPath());
-    final String childPath = normalisePath(childUri.getPath());
-    final String parentDir = parentPath.endsWith("/") ? parentPath : parentPath + "/";
-    return childPath.startsWith(parentDir);
-  }
-
-  @Nonnull
-  private static String normalisePath(@Nullable final String rawPath) {
-    if (rawPath == null || rawPath.isEmpty()) {
-      return "/";
-    }
-    // Use a synthetic file: URI to leverage URI normalisation, which collapses dot-segments
-    // without altering the path's structure.
-    return URI.create("file://" + rawPath).normalize().getPath();
   }
 
   @Nonnull

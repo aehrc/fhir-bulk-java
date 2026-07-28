@@ -25,7 +25,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.StandardOpenOption;
 import javax.annotation.Nonnull;
 
@@ -67,8 +66,9 @@ class LocalFileStore implements FileStore {
 
     @Override
     public boolean mkdirs() {
-      file.mkdirs();
-      return true;
+      // File.mkdirs() returns false both when creation fails and when the directory is already
+      // there, so the directory has to be checked for as well to report success correctly.
+      return file.mkdirs() || file.isDirectory();
     }
 
     @Nonnull
@@ -91,11 +91,12 @@ class LocalFileStore implements FileStore {
 
     @Override
     public long writeAll(@Nonnull final InputStream is) throws IOException {
-      // Open with CREATE_NEW to refuse to overwrite any pre-existing entry, and NOFOLLOW_LINKS
-      // so that a pre-placed symlink at the destination is not followed to a target outside the
-      // staging directory.
+      // Open with CREATE_NEW so that an existing entry at the destination is never written over,
+      // which covers a symlink pre-placed under the name of a file about to be downloaded.
+      // Symlinks encountered higher up the path are still followed, as pointing an output
+      // directory at other storage through a symlink is a legitimate thing to do.
       try (final OutputStream os = Files.newOutputStream(file.toPath(),
-          StandardOpenOption.CREATE_NEW, LinkOption.NOFOLLOW_LINKS)) {
+          StandardOpenOption.CREATE_NEW)) {
         return IOUtils.copyLarge(is, os);
       }
     }
