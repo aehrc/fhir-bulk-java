@@ -81,6 +81,13 @@ class UrlDownloadTemplateTest {
    */
   private static final DownloadConfig DEFAULTS = DownloadConfig.builder().build();
 
+  /**
+   * Retries are exercised without waiting out the real delay.
+   */
+  private static final DownloadConfig NO_DELAY = DownloadConfig.builder()
+      .maxRetryDelay(Duration.ZERO)
+      .build();
+
   @Test
   void testDownloadsAllUrlsSuccessfully() {
     final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
@@ -253,7 +260,7 @@ class UrlDownloadTemplateTest {
     writeAllConsumesTheBody();
 
     final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
-        DEFAULTS);
+        NO_DELAY);
     final long written = template.new UriDownloadTask(URI.create("http://foo.bar/file1"),
         fileHandle).call();
 
@@ -281,7 +288,7 @@ class UrlDownloadTemplateTest {
     });
 
     final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
-        DEFAULTS);
+        NO_DELAY);
     final long written = template.new UriDownloadTask(URI.create("http://foo.bar/file1"),
         fileHandle).call();
 
@@ -303,12 +310,12 @@ class UrlDownloadTemplateTest {
     writeAllConsumesTheBody();
 
     final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
-        DEFAULTS);
+        NO_DELAY);
     final ConnectionClosedException ex = assertThrows(ConnectionClosedException.class,
         () -> template.new UriDownloadTask(URI.create("http://foo.bar/file1"), fileHandle).call());
 
     assertEquals("Premature end of Content-Length delimited message body", ex.getMessage());
-    verify(httpClient, Mockito.times(DEFAULTS.getMaxRetries() + 1)).execute(Mockito.any());
+    verify(httpClient, Mockito.times(NO_DELAY.getMaxRetries() + 1)).execute(Mockito.any());
   }
 
   /**
@@ -325,11 +332,45 @@ class UrlDownloadTemplateTest {
     writeAllConsumesTheBody();
 
     final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
-        DownloadConfig.builder().maxRetries(0).build());
+        DownloadConfig.builder().maxRetries(0).maxRetryDelay(Duration.ZERO).build());
     assertThrows(ConnectionClosedException.class,
         () -> template.new UriDownloadTask(URI.create("http://foo.bar/file1"), fileHandle).call());
 
     verify(httpClient, Mockito.times(1)).execute(Mockito.any());
+  }
+
+  /**
+   * A waiting task holds one of the download threads, so the wait is bounded by the configured
+   * maximum however many attempts are made. Each delay is drawn at random from that window, so the
+   * bound is all that can be asserted - an individual delay may be anything up to it.
+   */
+  @Test
+  void testDownloadTaskKeepsRetryDelaysWithinTheConfiguredBound() throws Exception {
+    final Duration maxRetryDelay = Duration.ofMillis(200);
+    when(httpClient.execute(Mockito.any())).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(
+        new BasicStatusLine(new ProtocolVersion("http", 1, 1), 200, "OK"));
+    when(httpResponse.getEntity()).thenAnswer(
+        invocation -> new InputStreamEntity(truncatedBody(1), 3));
+    writeAllConsumesTheBody();
+
+    final DownloadConfig config = DownloadConfig.builder()
+        .maxRetries(2)
+        .maxRetryDelay(maxRetryDelay)
+        .build();
+    final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
+        config);
+
+    final long startedAt = System.nanoTime();
+    assertThrows(ConnectionClosedException.class,
+        () -> template.new UriDownloadTask(URI.create("http://foo.bar/file1"), fileHandle).call());
+    final Duration elapsed = Duration.ofNanos(System.nanoTime() - startedAt);
+
+    // One delay precedes each retry, and none of them may exceed the maximum.
+    final Duration longestPossibleWait = maxRetryDelay.multipliedBy(config.getMaxRetries());
+    assertTrue(elapsed.compareTo(longestPossibleWait.plusSeconds(1)) < 0,
+        "Retries took " + elapsed + ", which exceeds the bound of " + longestPossibleWait);
+    verify(httpClient, Mockito.times(3)).execute(Mockito.any());
   }
 
   /**
@@ -348,7 +389,7 @@ class UrlDownloadTemplateTest {
     writeAllConsumesTheBody();
 
     final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
-        DEFAULTS);
+        NO_DELAY);
     final long written = template.new UriDownloadTask(URI.create("http://foo.bar/file1"),
         fileHandle).call();
 
@@ -371,7 +412,7 @@ class UrlDownloadTemplateTest {
     writeAllConsumesTheBody();
 
     final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
-        DEFAULTS);
+        NO_DELAY);
     final IOException ex = assertThrows(IOException.class,
         () -> template.new UriDownloadTask(URI.create("http://foo.bar/file1"), fileHandle).call());
 
@@ -394,7 +435,7 @@ class UrlDownloadTemplateTest {
         .thenThrow(new IOException("No space left on device"));
 
     final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
-        DEFAULTS);
+        NO_DELAY);
     final IOException ex = assertThrows(IOException.class,
         () -> template.new UriDownloadTask(URI.create("http://foo.bar/file1"), fileHandle).call());
 
@@ -413,7 +454,7 @@ class UrlDownloadTemplateTest {
         new BasicStatusLine(new ProtocolVersion("http", 1, 1), 403, "Forbidden"));
 
     final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
-        DEFAULTS);
+        NO_DELAY);
     assertThrows(HttpError.class, () -> template.new UriDownloadTask(
         URI.create("http://foo.bar/file1"), fileHandle).call());
 

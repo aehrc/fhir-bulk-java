@@ -17,9 +17,12 @@
 
 package au.csiro.fhir.export.download;
 
+import java.time.Duration;
+import javax.annotation.Nonnull;
 import jakarta.validation.constraints.Min;
 import lombok.Builder;
 import lombok.Value;
+import org.hibernate.validator.constraints.time.DurationMin;
 
 /**
  * Configuration relating to the download of the output files of an export.
@@ -35,4 +38,16 @@ public class DownloadConfig {
   @Builder.Default
   @Min(0)
   int maxRetries = 4;
+
+  /**
+   * The longest that a retry of a file is delayed. Each delay is a random value up to this, so
+   * that downloads cut short together do not all retry at the same moment. Zero retries
+   * immediately.
+   */
+  @Nonnull
+  @Builder.Default
+  // The default message for this constraint is an EL template, which is left uninterpolated
+  // without an EL implementation on the classpath, so it is spelled out here instead.
+  @DurationMin(nanos = 0, message = "must not be negative")
+  Duration maxRetryDelay = Duration.ofSeconds(2);
 }

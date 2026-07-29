@@ -39,6 +39,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -121,6 +122,22 @@ public class UrlDownloadTemplate {
         || e instanceof SocketException;
   }
 
+  /**
+   * How long to wait before the next attempt at a file. Downloads run concurrently against a
+   * single endpoint, so a fault that cuts several of them short at once would otherwise have them
+   * all retry in step. Spreading each one at random across the configured window breaks that up,
+   * and holds the wait to a bound, since a waiting task occupies one of the download threads.
+   *
+   * @return a delay of at most the configured maximum
+   */
+  @Nonnull
+  private Duration nextRetryDelay() {
+    final long maxMillis = config.getMaxRetryDelay().toMillis();
+    return maxMillis > 0
+           ? Duration.ofMillis(ThreadLocalRandom.current().nextLong(maxMillis + 1))
+           : Duration.ZERO;
+  }
+
   @Value
   class UriDownloadTask implements Callable<Long> {
 
@@ -153,8 +170,10 @@ public class UrlDownloadTemplate {
             log.error("Failed to download {} after {} attempts", source, attempt);
             throw e;
           }
-          log.warn("Download of {} failed on attempt {} of {} ({}), retrying", source,
-              attempt, maxAttempts, e.getMessage());
+          final Duration delay = nextRetryDelay();
+          log.warn("Download of {} failed on attempt {} of {} ({}), retrying in {}", source,
+              attempt, maxAttempts, e.getMessage(), delay);
+          TimeUnit.MILLISECONDS.sleep(delay.toMillis());
         }
       }
     }

@@ -34,6 +34,7 @@ public class BulkDataCustomisedExportApp {
 
     final DownloadConfig downloadConfig = DownloadConfig.builder()
         .maxRetries(9)
+        .maxRetryDelay(Duration.ofSeconds(5))
         .build();
 
     final BulkExportResult result = BulkExportClient.systemBuilder()

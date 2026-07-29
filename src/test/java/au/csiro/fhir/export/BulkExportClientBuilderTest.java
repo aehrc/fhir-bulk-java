@@ -24,6 +24,7 @@ import au.csiro.fhir.auth.AuthConfig;
 import au.csiro.fhir.export.BulkExportClient.BulkExportClientBuilder;
 import au.csiro.fhir.export.download.DownloadConfig;
 import jakarta.validation.ConstraintViolationException;
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -51,8 +52,8 @@ public class BulkExportClientBuilderTest {
   }
 
   /**
-   * A retry count is counted down, so it cannot be negative. It is rejected when the client is
-   * built rather than part way through an export.
+   * A delay is slept for and a retry count is counted down, so neither can be negative. They are
+   * rejected when the client is built rather than part way through an export.
    */
   @Test
   void testFailsEarlyWithInvalidDownloadConfiguration() {
@@ -62,6 +63,7 @@ public class BulkExportClientBuilderTest {
         .withOutputDir("output-dir")
         .withDownloadConfig(DownloadConfig.builder()
             .maxRetries(-1)
+            .maxRetryDelay(Duration.ofSeconds(-1))
             .build());
 
     final ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
@@ -69,7 +71,8 @@ public class BulkExportClientBuilderTest {
 
     assertEquals(
         "Invalid Bulk Export Client Configuration\n"
-            + "downloadConfig.maxRetries: must be greater than or equal to 0",
+            + "downloadConfig.maxRetries: must be greater than or equal to 0\n"
+            + "downloadConfig.maxRetryDelay: must not be negative",
         ex.getMessage());
   }
 

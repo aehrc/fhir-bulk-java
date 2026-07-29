@@ -271,7 +271,7 @@ or by providing a customised sub-configuration objects.
 - `HttpClientConfig` - customise the HTTP client configuration (e.g. retry
   count, socket timeout)
 - `DownloadConfig` - customise how a download whose transfer is cut short
-  mid-body is retried (e.g. max retries)
+  mid-body is retried (e.g. max retries, max retry delay)
 
 ```java
 // The FHIR endpoint URL for https://bulk-data.smarthealthit.org/.
@@ -295,6 +295,7 @@ final HttpClientConfig httpClientConfig = HttpClientConfig.builder()
 // Create a customised download configuration.
 final DownloadConfig downloadConfig = DownloadConfig.builder()
         .maxRetries(9) // Retries per file, on top of the first attempt.
+        .maxRetryDelay(Duration.ofSeconds(5)) // Each delay is random, up to this.
         .build();
 
 // Build the client with a system level and customised run-time configuration.
