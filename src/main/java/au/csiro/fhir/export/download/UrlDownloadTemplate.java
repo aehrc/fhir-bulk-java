@@ -237,6 +237,20 @@ public class UrlDownloadTemplate {
   }
 
   /**
+   * Creates a new instance of the template with the default download configuration, which retries a
+   * failed download four times.
+   *
+   * @param httpClient the HTTP client to use for downloading (its life cycle should be managed
+   * externally).
+   * @param executorService the executor service to use for concurrent downloads (its life cycle
+   * should be managed externally).
+   */
+  public UrlDownloadTemplate(@Nonnull final HttpClient httpClient,
+      @Nonnull final ExecutorService executorService) {
+    this(httpClient, executorService, DownloadConfig.builder().build());
+  }
+
+  /**
    * Downloads the given URLs concurrently to provided destinations in a
    * {@link FileStore}.
    *

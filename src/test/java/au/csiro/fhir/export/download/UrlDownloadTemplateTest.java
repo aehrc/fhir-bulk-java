@@ -180,6 +180,15 @@ class UrlDownloadTemplateTest {
   }
 
   /**
+   * The two-argument constructor predates the configuration and is public API of a released
+   * version, so it keeps working and supplies the defaults rather than being taken away.
+   */
+  @Test
+  void testDefaultsTheConfigurationWhenNotGiven() {
+    assertEquals(DEFAULTS, new UrlDownloadTemplate(httpClient, executorService).config);
+  }
+
+  /**
    * A body that yields some bytes and then fails, as one cut short mid-transfer does.
    *
    * @param bytesBeforeFailure the number of bytes served before the failure
