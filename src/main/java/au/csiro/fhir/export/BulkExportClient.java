@@ -24,6 +24,7 @@ import au.csiro.fhir.auth.AuthConfig;
 import au.csiro.fhir.auth.SMARTTokenCredentialFactory;
 import au.csiro.fhir.auth.TokenCredentialFactory;
 import au.csiro.fhir.export.BulkExportResult.FileResult;
+import au.csiro.fhir.export.download.DownloadConfig;
 import au.csiro.fhir.export.download.UrlDownloadTemplate;
 import au.csiro.fhir.export.download.UrlDownloadTemplate.UrlDownloadEntry;
 import au.csiro.fhir.export.ws.AssociatedData;
@@ -219,6 +220,14 @@ public class BulkExportClient {
   @Builder.Default
   AsyncConfig asyncConfig = AsyncConfig.builder().build();
 
+  /**
+   * The configuration for the download of the output files.
+   */
+  @Nonnull
+  @Valid
+  @Builder.Default
+  DownloadConfig downloadConfig = DownloadConfig.builder().build();
+
 
   /**
    * The configuration for the authentication.
@@ -307,7 +316,7 @@ public class BulkExportClient {
           new BulkExportAsyncService(httpClient, URI.create(fhirEndpointUrl)),
           asyncConfig);
       final UrlDownloadTemplate downloadTemplate = new UrlDownloadTemplate(httpClient,
-          executorServiceResource.getExecutorService());
+          executorServiceResource.getExecutorService(), downloadConfig);
 
       final BulkExportResult result = doExport(fileStore, bulkExportTemplate, downloadTemplate);
       log.info("Export successful: {}", result);
