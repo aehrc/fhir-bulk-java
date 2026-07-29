@@ -47,8 +47,8 @@ public class DownloadConfig {
    */
   @Nonnull
   @Builder.Default
-  // The default message for this constraint is an EL template, which is left uninterpolated
-  // without an EL implementation on the classpath, so it is spelled out here instead.
+  // The default message for this constraint is an EL template, and ValidationUtils interpolates
+  // with a ParameterMessageInterpolator, which does not evaluate EL, so it is spelled out here.
   @DurationMin(nanos = 0, message = "must not be negative")
   Duration maxRetryDelay = Duration.ofSeconds(2);
 }
