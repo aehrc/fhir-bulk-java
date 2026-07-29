@@ -79,7 +79,9 @@ public class HttpClientConfig implements Serializable {
   private boolean retryEnabled = true;
 
   /**
-   * The number of times to retry failed terminology requests.
+   * The number of times to retry a failed request. This is applied by the HTTP client while the
+   * request is in flight, so it does not cover a response body that ends early while being read -
+   * that is retried per file during download instead.
    */
   @NotNull
   @Min(1)

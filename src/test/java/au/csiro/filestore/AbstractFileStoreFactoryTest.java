@@ -81,6 +81,24 @@ public abstract class AbstractFileStoreFactoryTest {
     assertEquals("Hello, world!", FileUtils.readFileToString(file, StandardCharsets.UTF_8));
   }
 
+  /**
+   * A download that is retried writes the file again from the start, so an implementation that
+   * appended, or that left the tail of a longer earlier write in place, would silently corrupt the
+   * output. The second write here is the shorter of the two, so any residue of the first shows up.
+   */
+  @Test
+  void testWriteAllReplacesExistingContent() throws IOException {
+    final File file = testRootDir.resolve("file").toFile();
+    final FileHandle handle = fileStore.get(file.getPath());
+    handle.writeAll(IOUtils.toInputStream("A partial write from a failed attempt",
+        StandardCharsets.UTF_8));
+    final long written = handle.writeAll(
+        IOUtils.toInputStream("Hello, world!", StandardCharsets.UTF_8));
+
+    assertEquals("Hello, world!", FileUtils.readFileToString(file, StandardCharsets.UTF_8));
+    assertEquals("Hello, world!".length(), written);
+  }
+
   @Test
   void testToUriWorks() {
     Assertions.assertEquals("/foo/bar", FileHandle.ofLocal("/foo/bar").getLocation());

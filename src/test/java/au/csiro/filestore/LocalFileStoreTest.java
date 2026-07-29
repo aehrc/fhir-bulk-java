@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,25 +49,27 @@ public class LocalFileStoreTest extends AbstractFileStoreFactoryTest {
   }
 
   @Test
-  void testWriteAllRefusesToOverwriteExistingFile() throws IOException {
+  void testWriteAllOverwritesExistingRegularFile() throws IOException {
+    // A regular file already at the destination is replaced rather than refused, which is what a
+    // retried download relies on to overwrite a partial write from a previous attempt.
     final Path existing = testRootDir.resolve("existing.txt");
     Files.writeString(existing, "original");
 
-    assertThrows(FileAlreadyExistsException.class, () -> fileStore.get(existing.toString())
-        .writeAll(IOUtils.toInputStream("payload", StandardCharsets.UTF_8)));
+    fileStore.get(existing.toString())
+        .writeAll(IOUtils.toInputStream("payload", StandardCharsets.UTF_8));
 
-    assertEquals("original", Files.readString(existing));
+    assertEquals("payload", Files.readString(existing));
   }
 
   @Test
   void testWriteAllRefusesToWriteOverSymlinkAtDestination() throws IOException {
-    // A symlink already present under the name of a file about to be written is an existing entry
-    // as far as CREATE_NEW is concerned, so it is refused rather than followed to its target.
+    // A symlink already present under the name of a file about to be written must not be followed
+    // to its target, which NOFOLLOW_LINKS enforces by refusing to open it at all.
     final Path target = testRootDir.resolve("target.txt");
     Files.writeString(target, "original");
     final Path link = createSymbolicLink(testRootDir.resolve("link.txt"), target);
 
-    assertThrows(FileAlreadyExistsException.class, () -> fileStore.get(link.toString())
+    assertThrows(IOException.class, () -> fileStore.get(link.toString())
         .writeAll(IOUtils.toInputStream("payload", StandardCharsets.UTF_8)));
 
     assertEquals("original", Files.readString(target));

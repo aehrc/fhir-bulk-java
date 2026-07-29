@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.StandardOpenOption;
 import javax.annotation.Nonnull;
 
@@ -91,12 +92,15 @@ class LocalFileStore implements FileStore {
 
     @Override
     public long writeAll(@Nonnull final InputStream is) throws IOException {
-      // Open with CREATE_NEW so that an existing entry at the destination is never written over,
-      // which covers a symlink pre-placed under the name of a file about to be downloaded.
-      // Symlinks encountered higher up the path are still followed, as pointing an output
-      // directory at other storage through a symlink is a legitimate thing to do.
+      // NOFOLLOW_LINKS refuses to open the destination if it is a symlink, which covers a symlink
+      // pre-placed under the name of a file about to be downloaded. Symlinks encountered higher up
+      // the path are still followed, as pointing an output directory at other storage through a
+      // symlink is a legitimate thing to do. Unlike CREATE_NEW, this still allows a regular file
+      // already at the destination to be overwritten, which a retried download relies on to
+      // replace a partial write from a previous attempt.
       try (final OutputStream os = Files.newOutputStream(file.toPath(),
-          StandardOpenOption.CREATE_NEW)) {
+          StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
+          LinkOption.NOFOLLOW_LINKS)) {
         return IOUtils.copyLarge(is, os);
       }
     }
