@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.fhir.auth.AuthConfig;
 import au.csiro.fhir.export.BulkExportClient.BulkExportClientBuilder;
+import au.csiro.fhir.export.download.DownloadConfig;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 
@@ -46,6 +47,29 @@ public class BulkExportClientBuilderTest {
             + "authConfig.clientId: must be supplied if auth is enabled\n"
             + "authConfig: either clientSecret or privateKeyJWK must be supplied if auth is enabled\n"
             + "fhirEndpointUrl: must be a valid URL",
+        ex.getMessage());
+  }
+
+  /**
+   * A retry count is counted down, so it cannot be negative. It is rejected when the client is
+   * built rather than part way through an export.
+   */
+  @Test
+  void testFailsEarlyWithInvalidDownloadConfiguration() {
+
+    final BulkExportClientBuilder invalidBuilder = BulkExportClient.builder()
+        .withFhirEndpointUrl("http://foo.bar/fhir")
+        .withOutputDir("output-dir")
+        .withDownloadConfig(DownloadConfig.builder()
+            .maxRetries(-1)
+            .build());
+
+    final ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
+        invalidBuilder::build);
+
+    assertEquals(
+        "Invalid Bulk Export Client Configuration\n"
+            + "downloadConfig.maxRetries: must be greater than or equal to 0",
         ex.getMessage());
   }
 
