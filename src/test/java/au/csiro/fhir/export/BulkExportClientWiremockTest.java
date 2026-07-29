@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.fhir.auth.AuthConfig;
 import au.csiro.fhir.export.BulkExportException.HttpError;
+import au.csiro.fhir.export.BulkExportException.ProtocolError;
 import au.csiro.fhir.model.Reference;
 import au.csiro.fhir.export.ws.AssociatedData;
 import au.csiro.fhir.export.ws.BulkExportRequest;
@@ -50,6 +51,7 @@ import com.google.common.base.Charsets;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -62,6 +64,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import wiremock.net.minidev.json.JSONArray;
 
+/**
+ * WireMock-based tests for {@link BulkExportClient}.
+ *
+ * @author Piotr Szul
+ * @author John Grimes
+ */
 @WireMockTest
 class BulkExportClientWiremockTest {
 
@@ -829,6 +837,84 @@ class BulkExportClientWiremockTest {
 
     // The token should be requested once and reused for all requests
     verify(1, postRequestedFor(urlPathEqualTo("/token")));
+  }
+
+  @Test
+  void testExportFailsOnPoisonedManifestType(@Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
+
+    stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
+
+    stubFor(get(urlPathEqualTo("/$export"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs(STARTED)
+        .willReturn(
+            aResponse().withStatus(202)
+                .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
+        .willSetStateTo("done")
+    );
+
+    stubFor(delete(urlPathEqualTo("/pool"))
+        .willReturn(aResponse().withStatus(202))
+    );
+
+    stubFor(get(urlPathEqualTo("/pool"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs("done")
+        .willReturn(aResponse().withStatus(200).withBody(
+            new JSONObject()
+                .put("transactionTime", "1970-02-27T12:39:04.343Z")
+                .put("request", "http://localhost:8080/$export")
+                .put("requiresAccessToken", false)
+                .put("output", new JSONArray()
+                    .appendElement(new JSONObject()
+                        .put("type", "../../secret")
+                        .put("url", wmRuntimeInfo.getHttpBaseUrl() + "/file/00")
+                        .put("count", 2)
+                    )
+                )
+                .toString()
+        ))
+    );
+
+    stubFor(get(urlPathEqualTo("/file/00"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withBody(RESOURCE_00))
+    );
+
+    // The output directory is nested two levels inside this test's own scratch directory, so that
+    // the two levels of traversal in the manifest type land inside it rather than somewhere shared.
+    // The parent of the escape target exists (the client creates the output directory before
+    // fetching the manifest), so the traversal would still succeed if it were not rejected.
+    final File scratchDir = getRandomExportLocation();
+    final File exportDir = new File(scratchDir, "nested/output");
+
+    final ProtocolError ex = Assertions.assertThrows(ProtocolError.class, () ->
+        BulkExportClient.builder()
+            .withFhirEndpointUrl(wmRuntimeInfo.getHttpBaseUrl())
+            .withOutputDir(exportDir.getPath())
+            .build()
+            .export()
+    );
+    assertEquals("Manifest 'type' is not a valid FHIR resource type name: ../../secret",
+        ex.getMessage());
+    assertNotMarkedSuccess(exportDir);
+
+    // The manifest type "../../secret" with the chunk and extension suffix would resolve to a
+    // sibling of the output directory's parent if the traversal had succeeded, so assert that no
+    // such file appears.
+    final Path escapeTarget = exportDir.toPath().toAbsolutePath()
+        .resolve("../../secret.0000.ndjson").normalize();
+    assertEquals(scratchDir.toPath().toAbsolutePath().resolve("secret.0000.ndjson"), escapeTarget,
+        "The escape target must stay inside this test's scratch directory");
+    assertFalse(Files.exists(escapeTarget),
+        "File written outside output directory: " + escapeTarget);
+
+    // No download should have been attempted for the rejected entry.
+    verify(0, getRequestedFor(urlPathEqualTo("/file/00")));
+
+    // check that cleanup was called
+    verify(1, deleteRequestedFor(urlPathEqualTo("/pool")));
   }
 
   @Test

@@ -82,6 +82,8 @@ import org.hibernate.validator.constraints.URL;
  * A client for the FHIR Bulk Data Export API.
  *
  * @see <a href="https://build.fhir.org/ig/HL7/bulk-data/export.html">FHIR Bulk Export</a>
+ * @author Piotr Szul
+ * @author John Grimes
  */
 @Value
 @Slf4j
@@ -401,6 +403,8 @@ public class BulkExportClient {
             mapping(BulkExportResponse.FileItem::getUrl, toList())));
 
     final String extension = extensionFromFormat(outputFormat, outputExtension);
+    // The manifest is validated in BulkExportTemplate before it reaches here, which guarantees
+    // that each type is a FHIR resource type name and so cannot escape the destination directory.
     return urlsByType.entrySet().stream()
         .flatMap(entry -> IntStream.range(0, entry.getValue().size())
             .mapToObj(index -> new UrlDownloadEntry(
