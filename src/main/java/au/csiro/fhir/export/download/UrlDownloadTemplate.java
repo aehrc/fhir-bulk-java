@@ -163,8 +163,9 @@ public class UrlDownloadTemplate {
     public Long call() throws Exception {
       // A body that ends early is only discovered while it is being read, which is after the HTTP
       // client has stopped considering the request retryable. Retry here so that one interrupted
-      // transfer does not discard an export that may run to thousands of files. The file is
-      // rewritten from the start, so a partial write from the previous attempt is replaced.
+      // transfer does not discard an export that may run to thousands of files. A partial write
+      // from the previous attempt is replaced, since writeAll requires the file to be written from
+      // the start.
       //
       // Every failure of an attempt is retried unless it is known to be permanent. A rejected
       // request is excluded by construction, since HttpError is not an IOException.

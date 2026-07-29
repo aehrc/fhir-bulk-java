@@ -76,7 +76,13 @@ public interface FileStore extends Closeable {
     URI toUri();
 
     /**
-     * Write the contents of the input stream to the file.
+     * Write the contents of the input stream to the file, replacing anything already there.
+     * <p>
+     * The file must be written from the start rather than appended to, and must be left holding
+     * exactly the bytes read from the stream. A download that is retried calls this again on the
+     * same handle after an earlier attempt failed part way through, so an implementation that
+     * appended, or that left the tail of a longer earlier write in place, would silently corrupt
+     * the output.
      *
      * @param inputStream the input stream to write.
      * @return the number of bytes written.
