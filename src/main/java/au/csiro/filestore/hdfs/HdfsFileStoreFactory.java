@@ -69,6 +69,31 @@ public class HdfsFileStoreFactory implements FileStoreFactory {
     this(new Configuration());
   }
 
+  /**
+   * Creates a factory that hands out stores over a filesystem supplied by the caller.
+   *
+   * <p>Use this when the calling application holds a filesystem that the Hadoop cache will not
+   * return for the destination, such as a decorated instance or one opened under a different user.
+   *
+   * <p>The stores this factory creates ignore the location passed to
+   * {@link #createFileStore(String)} and route every operation through the supplied filesystem. A
+   * location belonging to a different filesystem fails with Hadoop's "Wrong FS" error.
+   *
+   * <p>Note that the supplied filesystem also fixes the identity that writes are performed as, in
+   * place of the one the cache would have selected. A Hadoop filesystem captures its user when it
+   * is constructed and keeps it for every later operation, so a server that impersonates its users
+   * through {@code UserGroupInformation.doAs} loses that attribution here: every export writes as
+   * whichever user opened the supplied instance, whoever requested it. This fails silently, so
+   * prefer {@link #createFileStore(String)} where per-user attribution matters.
+   *
+   * @param fileSystem the filesystem to write through
+   * @return a factory that creates stores over the supplied filesystem
+   */
+  @Nonnull
+  public static FileStoreFactory forFileSystem(@Nonnull final FileSystem fileSystem) {
+    return location -> new HdfsFileStore(fileSystem);
+  }
+
   @Nonnull
   @Override
   public FileStore createFileStore(@Nonnull final String location) throws IOException {

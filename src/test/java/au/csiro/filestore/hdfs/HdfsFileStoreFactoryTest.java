@@ -77,4 +77,17 @@ public class HdfsFileStoreFactoryTest extends AbstractFileStoreFactoryTest {
 
     verify(borrowed, never()).close();
   }
+
+  /**
+   * A store built over a caller-supplied filesystem writes through that instance and leaves it
+   * open, so that the caller can keep using it once the export has finished.
+   */
+  @Test
+  void testFactoryForSuppliedFileSystemLeavesItOpen() throws IOException {
+    final FileSystem supplied = mock(FileSystem.class);
+
+    HdfsFileStoreFactory.forFileSystem(supplied).createFileStore(testRootDir.toString()).close();
+
+    verify(supplied, never()).close();
+  }
 }
