@@ -32,17 +32,39 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * File store factory based on Apache Hadoop HDFS FileSystem.
+ *
+ * <p>Filesystems are resolved through the JVM-wide Hadoop filesystem cache and are borrowed rather
+ * than owned, so closing a store never closes the filesystem behind it. Releasing cached instances
+ * is the host application's business; Hadoop closes what remains at JVM shutdown.
+ *
+ * <p>That obligation becomes a real one in a server that impersonates its users. The cache is keyed
+ * on scheme, authority and user, so each distinct user reaching a destination creates an instance
+ * that lives until the JVM exits. A server using {@code UserGroupInformation.doAs} should call
+ * {@code FileSystem.closeAllForUGI} when it tears a user's session down, or instances will
+ * accumulate for as long as the process runs.
  */
 public class HdfsFileStoreFactory implements FileStoreFactory {
 
   @Nonnull
   private final Configuration configuration;
 
+  /**
+   * Creates a factory that resolves filesystems through the Hadoop filesystem cache.
+   *
+   * <p>The configuration is only consulted when the cache has to construct a filesystem. The cache
+   * is keyed on scheme, authority and user alone, so if the host application has already opened a
+   * filesystem for the destination, that instance is returned and this configuration is ignored.
+   *
+   * @param configuration the configuration to construct filesystems from, on a cache miss
+   */
   public HdfsFileStoreFactory(@Nonnull final Configuration configuration) {
-    // here we use scala.Option
     this.configuration = configuration;
   }
 
+  /**
+   * Creates a factory that resolves filesystems through the Hadoop filesystem cache, using a
+   * default configuration when the cache has to construct one.
+   */
   public HdfsFileStoreFactory() {
     this(new Configuration());
   }
@@ -59,6 +81,12 @@ public class HdfsFileStoreFactory implements FileStoreFactory {
     @Nonnull
     private final FileSystem fileSystem;
 
+    /**
+     * Creates a store over a filesystem supplied by the caller. The filesystem is borrowed: the
+     * caller retains ownership and remains responsible for closing it.
+     *
+     * @param fileSystem the filesystem to use
+     */
     HdfsFileStore(@Nonnull final FileSystem fileSystem) {
       this.fileSystem = fileSystem;
     }
@@ -70,8 +98,15 @@ public class HdfsFileStoreFactory implements FileStoreFactory {
     }
 
     @Override
-    public void close() throws IOException {
-      fileSystem.close();
+    public void close() {
+      // The filesystem is borrowed, never owned, so this store does not close it. It comes either
+      // from the caller or from the JVM-wide Hadoop cache, which is shared with the host
+      // application; closing a cached instance evicts it and leaves the application holding a
+      // closed filesystem. Cached instances are released by Hadoop's own shutdown hook.
+      //
+      // Files are already durable without this: each write is committed by the try-with-resources
+      // around fileSystem.create in writeAll, which finalises the file through the HDFS write
+      // pipeline and completes the upload on object stores.
     }
 
     @Value
