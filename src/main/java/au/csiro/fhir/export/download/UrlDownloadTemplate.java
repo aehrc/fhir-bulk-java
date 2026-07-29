@@ -26,10 +26,14 @@ import au.csiro.fhir.export.BulkExportException.DownloadError;
 import au.csiro.fhir.export.BulkExportException.HttpError;
 import au.csiro.fhir.export.BulkExportException.Timeout;
 import au.csiro.filestore.FileStore.FileHandle;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.SocketException;
+import java.io.InterruptedIOException;
 import java.net.URI;
+import java.nio.channels.ClosedByInterruptException;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.NoSuchFileException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
@@ -45,9 +49,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.ConnectionClosedException;
 import org.apache.http.HttpResponse;
-import org.apache.http.MalformedChunkCodingException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 
@@ -55,9 +57,9 @@ import org.apache.http.client.methods.HttpGet;
  * A template class for concurrent download of multiple URLs into a file store. The file store can
  * be any concrete implementation of the {@link FileStore} abstraction.
  * <p>
- * A download whose transfer is cut short mid-body is retried, since that is a transient fault.
- * Once a single download has used up its attempts this implementation fails fast: all the
- * remaining downloads are terminated.
+ * A download that fails is retried, unless the failure is one that is known to be permanent. Once a
+ * single download has used up its attempts this implementation fails fast: all the remaining
+ * downloads are terminated.
  * <p>
  * No cleanup is performed on failure - partial results may be left for some of the URLs.
  */
@@ -105,21 +107,31 @@ public class UrlDownloadTemplate {
   DownloadConfig config;
 
   /**
-   * Recognises a transfer that was cut short before the message was complete. Apache's body
-   * decoders raise these when the connection closes or is reset part way through, and no other
-   * part of a download does, so a broken transfer is told apart from a destination that cannot be
-   * written to by the type of the failure rather than by where it was thrown.
+   * Decides whether a failed attempt is worth repeating. Anything that is not known to be permanent
+   * is, because the two ways of being wrong here cost wildly different amounts: repeating a
+   * permanent failure wastes one file's transfers and then fails anyway, whereas declining to
+   * repeat a transient one abandons an export that may represent hours of server-side processing.
+   * Listing what must not be repeated therefore fails in the cheaper direction than listing what
+   * may be, and does not depend on which exception type a given transport or {@link FileStore}
+   * implementation happens to raise for a transfer that was cut short.
    *
    * @param e the failure that ended the attempt
-   * @return true if the transfer was cut short, and so is worth repeating
+   * @return true unless the failure is known to be permanent
    */
-  private static boolean isTruncatedBody(@Nonnull final IOException e) {
-    // ConnectionClosedException is a Content-Length delimited body ending early, and
-    // MalformedChunkCodingException, with its TruncatedChunkException subclass, the chunked
-    // equivalent. A SocketException is the same fault arriving as a reset rather than a close.
-    return e instanceof ConnectionClosedException
-        || e instanceof MalformedChunkCodingException
-        || e instanceof SocketException;
+  private static boolean isWorthRetrying(@Nonnull final IOException e) {
+    // Cancellation must be honoured rather than retried: download() interrupts the outstanding
+    // tasks once any one of them has failed, and a task that swallowed that would keep issuing
+    // requests for an export that has already been abandoned.
+    if (e instanceof InterruptedIOException || e instanceof ClosedByInterruptException) {
+      return false;
+    }
+    // A destination that does not exist or cannot be opened is a misconfigured output location
+    // rather than a fault in transit, so no number of attempts will make it writable. Note that a
+    // destination which fails part way through a write is not in this class: on a file store that
+    // writes over the network that is usually transient, so it is retried.
+    return !(e instanceof AccessDeniedException
+        || e instanceof NoSuchFileException
+        || e instanceof FileNotFoundException);
   }
 
   /**
@@ -154,25 +166,29 @@ public class UrlDownloadTemplate {
       // transfer does not discard an export that may run to thousands of files. The file is
       // rewritten from the start, so a partial write from the previous attempt is replaced.
       //
-      // Only a transfer cut short is retried. A destination that cannot be written to will not be
-      // fixed by fetching the body again, and re-downloading a large file to meet the same full
-      // disk or rejected write wastes the transfer. Failures of the request itself are left to the
-      // HTTP client, which retries them already.
+      // Every failure of an attempt is retried unless it is known to be permanent. A rejected
+      // request is excluded by construction, since HttpError is not an IOException.
       final int maxAttempts = config.getMaxRetries() + 1;
       for (int attempt = 1; ; attempt++) {
         try {
           return attemptDownload();
-        } catch (final IOException e) {
-          if (!isTruncatedBody(e)) {
-            throw e;
+        } catch (final IOException ex) {
+          if (!isWorthRetrying(ex)) {
+            throw ex;
           }
           if (attempt >= maxAttempts) {
             log.error("Failed to download {} after {} attempts", source, attempt);
-            throw e;
+            throw ex;
+          }
+          // The delay cannot be relied on to observe a cancellation, because a zero delay - either
+          // configured or drawn by the jitter - neither sleeps nor throws. Check for it directly so
+          // that a cancelled download stops here rather than starting another attempt.
+          if (Thread.interrupted()) {
+            throw new InterruptedException("Download of " + source + " was cancelled");
           }
           final Duration delay = nextRetryDelay();
-          log.warn("Download of {} failed on attempt {} of {} ({}), retrying in {}", source,
-              attempt, maxAttempts, e.getMessage(), delay);
+          log.debug("Download of {} failed on attempt {} of {} ({}), retrying in {}", source,
+              attempt, maxAttempts, ex.getMessage(), delay);
           TimeUnit.MILLISECONDS.sleep(delay.toMillis());
         }
       }

@@ -18,6 +18,7 @@
 package au.csiro.fhir.export.download;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
@@ -36,12 +37,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.SocketException;
 import java.net.URI;
+import java.nio.file.AccessDeniedException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import javax.annotation.Nonnull;
+import javax.net.ssl.SSLException;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.ConnectionClosedException;
 import org.apache.http.HttpResponse;
@@ -235,6 +238,25 @@ class UrlDownloadTemplateTest {
   }
 
   /**
+   * A body cut short at the same moment the download is cancelled, which is the ordering that
+   * matters: the task is interrupted while it is in the middle of a transfer that then fails.
+   *
+   * @return the body
+   */
+  @Nonnull
+  private static InputStream truncatedBodyOnCancelledDownload() {
+    return new InputStream() {
+
+      @Override
+      public int read() throws IOException {
+        Thread.currentThread().interrupt();
+        throw new ConnectionClosedException(
+            "Premature end of Content-Length delimited message body");
+      }
+    };
+  }
+
+  /**
    * Copies the body through to a sink, so that a read failure surfaces from where it would in
    * production: part way through the copy that {@code writeAll} performs.
    */
@@ -398,49 +420,127 @@ class UrlDownloadTemplateTest {
   }
 
   /**
-   * Retrying is confined to a transfer that was cut short, which is recognised by the type of the
-   * failure. Any other way of reading the body failing is not known to be transient, so repeating
-   * the transfer for it is not assumed to help.
+   * A transfer cut short does not arrive as one recognisable type. Over TLS it surfaces as an
+   * {@link SSLException}, which the HTTP client also declines to retry, so nothing would retry the
+   * originating failure of this issue on the HTTPS endpoints every real server uses.
    */
   @Test
-  void testDownloadTaskDoesNotRetryOtherReadFailures() throws Exception {
+  void testDownloadTaskRetriesAfterTlsTruncation() throws Exception {
     when(httpClient.execute(Mockito.any())).thenReturn(httpResponse);
     when(httpResponse.getStatusLine()).thenReturn(
         new BasicStatusLine(new ProtocolVersion("http", 1, 1), 200, "OK"));
-    when(httpResponse.getEntity()).thenReturn(new InputStreamEntity(
-        bodyFailingAfter(1, new IOException("Malformed response")), 3));
+    when(httpResponse.getEntity())
+        .thenReturn(new InputStreamEntity(
+            bodyFailingAfter(1, new SSLException("Unexpected end of stream")), 3))
+        .thenReturn(new InputStreamEntity(new ByteArrayInputStream(new byte[]{1, 2, 3}), 3));
     writeAllConsumesTheBody();
 
     final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
         NO_DELAY);
-    final IOException ex = assertThrows(IOException.class,
-        () -> template.new UriDownloadTask(URI.create("http://foo.bar/file1"), fileHandle).call());
+    final long written = template.new UriDownloadTask(URI.create("http://foo.bar/file1"),
+        fileHandle).call();
 
-    assertEquals("Malformed response", ex.getMessage());
-    verify(httpClient, Mockito.times(1)).execute(Mockito.any());
+    assertEquals(3L, written);
+    verify(httpClient, Mockito.times(2)).execute(Mockito.any());
   }
 
   /**
-   * A destination that cannot be written to is not a broken transfer. Fetching the body again
-   * cannot fix a full disk or a rejected write, so the transfer is not repeated for it.
+   * Which type a cut-short transfer arrives as depends on the transport and on how the body was
+   * encoded, so a read failure is repeated whether or not it is one of the recognised shapes. The
+   * cost of being wrong is one file's transfers; the cost of not retrying a transient fault is the
+   * whole export.
    */
   @Test
-  void testDownloadTaskDoesNotRetryDestinationFailure() throws Exception {
+  void testDownloadTaskRetriesUnrecognisedReadFailures() throws Exception {
+    when(httpClient.execute(Mockito.any())).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(
+        new BasicStatusLine(new ProtocolVersion("http", 1, 1), 200, "OK"));
+    when(httpResponse.getEntity())
+        .thenReturn(new InputStreamEntity(
+            bodyFailingAfter(1, new IOException("Malformed response")), 3))
+        .thenReturn(new InputStreamEntity(new ByteArrayInputStream(new byte[]{1, 2, 3}), 3));
+    writeAllConsumesTheBody();
+
+    final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
+        NO_DELAY);
+    final long written = template.new UriDownloadTask(URI.create("http://foo.bar/file1"),
+        fileHandle).call();
+
+    assertEquals(3L, written);
+    verify(httpClient, Mockito.times(2)).execute(Mockito.any());
+  }
+
+  /**
+   * A destination that fails part way through a write is not assumed to be permanent. On a file
+   * store that writes over the network, which {@code HdfsFileHandle} does, that is the common
+   * transient fault, and it cannot be told apart from a read failure by type in any case.
+   */
+  @Test
+  void testDownloadTaskRetriesDestinationFailureMidWrite() throws Exception {
+    when(httpClient.execute(Mockito.any())).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(
+        new BasicStatusLine(new ProtocolVersion("http", 1, 1), 200, "OK"));
+    when(httpResponse.getEntity()).thenAnswer(
+        invocation -> new InputStreamEntity(new ByteArrayInputStream(new byte[]{1, 2, 3}), 3));
+    when(fileHandle.writeAll(Mockito.any()))
+        .thenThrow(new IOException("Connection reset by peer"))
+        .thenReturn(3L);
+
+    final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
+        NO_DELAY);
+    final long written = template.new UriDownloadTask(URI.create("http://foo.bar/file1"),
+        fileHandle).call();
+
+    assertEquals(3L, written);
+    verify(httpClient, Mockito.times(2)).execute(Mockito.any());
+  }
+
+  /**
+   * A destination that cannot be opened at all is a misconfigured output location rather than a
+   * fault in transit, so no number of attempts will make it writable and the transfer is not
+   * repeated for it.
+   */
+  @Test
+  void testDownloadTaskDoesNotRetryUnwritableDestination() throws Exception {
     when(httpClient.execute(Mockito.any())).thenReturn(httpResponse);
     when(httpResponse.getStatusLine()).thenReturn(
         new BasicStatusLine(new ProtocolVersion("http", 1, 1), 200, "OK"));
     when(httpResponse.getEntity()).thenReturn(
         new InputStreamEntity(new ByteArrayInputStream(new byte[]{1, 2, 3}), 3));
     when(fileHandle.writeAll(Mockito.any()))
-        .thenThrow(new IOException("No space left on device"));
+        .thenThrow(new AccessDeniedException("output-dir/file1"));
 
     final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
         NO_DELAY);
-    final IOException ex = assertThrows(IOException.class,
+    assertThrows(AccessDeniedException.class,
         () -> template.new UriDownloadTask(URI.create("http://foo.bar/file1"), fileHandle).call());
 
-    assertEquals("No space left on device", ex.getMessage());
     verify(httpClient, Mockito.times(1)).execute(Mockito.any());
+  }
+
+  /**
+   * Retrying must not outlive the export it belongs to. Once any one download has failed
+   * {@code download()} interrupts the rest, and a task that treated its own cancellation as a
+   * transient fault would keep issuing requests for work that has already been abandoned. A zero
+   * delay neither sleeps nor throws, so the interrupt has to be observed independently of it.
+   */
+  @Test
+  void testDownloadTaskStopsWhenCancelled() throws Exception {
+    when(httpClient.execute(Mockito.any())).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(
+        new BasicStatusLine(new ProtocolVersion("http", 1, 1), 200, "OK"));
+    when(httpResponse.getEntity()).thenAnswer(
+        invocation -> new InputStreamEntity(truncatedBodyOnCancelledDownload(), 3));
+    writeAllConsumesTheBody();
+
+    final UrlDownloadTemplate template = new UrlDownloadTemplate(httpClient, executorService,
+        NO_DELAY);
+    assertThrows(InterruptedException.class,
+        () -> template.new UriDownloadTask(URI.create("http://foo.bar/file1"), fileHandle).call());
+
+    verify(httpClient, Mockito.times(1)).execute(Mockito.any());
+    assertFalse(Thread.currentThread().isInterrupted(),
+        "The interrupt should have been consumed by the InterruptedException");
   }
 
   /**

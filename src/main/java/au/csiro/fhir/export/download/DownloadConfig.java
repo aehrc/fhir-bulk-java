@@ -32,8 +32,9 @@ import org.hibernate.validator.constraints.time.DurationMin;
 public class DownloadConfig {
 
   /**
-   * The number of times a single file is retried after its first attempt fails. Zero disables
-   * retrying, so the default of four allows five attempts in total.
+   * The number of times a single file is retried after its first attempt fails, for a failure that
+   * is not known to be permanent. Zero disables retrying, so the default of four allows five
+   * attempts in total.
    */
   @Builder.Default
   @Min(0)

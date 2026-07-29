@@ -270,8 +270,8 @@ or by providing a customised sub-configuration objects.
   transient errors, max pooling delay)
 - `HttpClientConfig` - customise the HTTP client configuration (e.g. retry
   count, socket timeout)
-- `DownloadConfig` - customise how a download whose transfer is cut short
-  mid-body is retried (e.g. max retries, max retry delay)
+- `DownloadConfig` - customise how a failed download of an output file is
+  retried (e.g. max retries, max retry delay)
 
 ```java
 // The FHIR endpoint URL for https://bulk-data.smarthealthit.org/.
