@@ -6,6 +6,7 @@ tmp/
 .classpath
 .project
 .settings/
+.factorypath
 
 # IDEA
 .idea

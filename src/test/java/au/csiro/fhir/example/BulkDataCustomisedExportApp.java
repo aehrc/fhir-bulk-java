@@ -2,6 +2,7 @@ package au.csiro.fhir.example;
 
 import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.fhir.export.BulkExportResult;
+import au.csiro.fhir.export.download.DownloadConfig;
 import au.csiro.fhir.export.ws.AsyncConfig;
 import au.csiro.http.HttpClientConfig;
 
@@ -30,7 +31,12 @@ public class BulkDataCustomisedExportApp {
         .retryCount(5)
         .socketTimeout(10_000)
         .build();
-    
+
+    final DownloadConfig downloadConfig = DownloadConfig.builder()
+        .maxRetries(9)
+        .maxRetryDelay(Duration.ofSeconds(5))
+        .build();
+
     final BulkExportResult result = BulkExportClient.systemBuilder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
@@ -38,6 +44,7 @@ public class BulkDataCustomisedExportApp {
         .withTimeout(Duration.ofMinutes(60))
         .withAsyncConfig(asyncConfig)
         .withHttpClientConfig(httpClientConfig)
+        .withDownloadConfig(downloadConfig)
         .build()
         .export();
     

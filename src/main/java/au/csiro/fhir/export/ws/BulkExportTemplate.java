@@ -214,6 +214,9 @@ public class BulkExportTemplate {
 
     @Nonnull
     private CompletedState handleFinalResponse(@Nonnull final BulkExportResponse asyncResponse) {
+      // Validate the manifest here, at the single point where a completed response enters the
+      // interaction, so that everything downstream can rely on its server supplied values.
+      asyncResponse.validate();
       return new CompletedState(asyncResponse, poolingURI);
     }
 

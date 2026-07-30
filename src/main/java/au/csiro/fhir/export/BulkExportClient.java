@@ -24,6 +24,7 @@ import au.csiro.fhir.auth.AuthConfig;
 import au.csiro.fhir.auth.SMARTTokenCredentialFactory;
 import au.csiro.fhir.auth.TokenCredentialFactory;
 import au.csiro.fhir.export.BulkExportResult.FileResult;
+import au.csiro.fhir.export.download.DownloadConfig;
 import au.csiro.fhir.export.download.UrlDownloadTemplate;
 import au.csiro.fhir.export.download.UrlDownloadTemplate.UrlDownloadEntry;
 import au.csiro.fhir.export.ws.AssociatedData;
@@ -81,6 +82,8 @@ import org.hibernate.validator.constraints.URL;
  * A client for the FHIR Bulk Data Export API.
  *
  * @see <a href="https://build.fhir.org/ig/HL7/bulk-data/export.html">FHIR Bulk Export</a>
+ * @author Piotr Szul
+ * @author John Grimes
  */
 @Value
 @Slf4j
@@ -219,6 +222,14 @@ public class BulkExportClient {
   @Builder.Default
   AsyncConfig asyncConfig = AsyncConfig.builder().build();
 
+  /**
+   * The configuration for the download of the output files.
+   */
+  @Nonnull
+  @Valid
+  @Builder.Default
+  DownloadConfig downloadConfig = DownloadConfig.builder().build();
+
 
   /**
    * The configuration for the authentication.
@@ -307,7 +318,7 @@ public class BulkExportClient {
           new BulkExportAsyncService(httpClient, URI.create(fhirEndpointUrl)),
           asyncConfig);
       final UrlDownloadTemplate downloadTemplate = new UrlDownloadTemplate(httpClient,
-          executorServiceResource.getExecutorService());
+          executorServiceResource.getExecutorService(), downloadConfig);
 
       final BulkExportResult result = doExport(fileStore, bulkExportTemplate, downloadTemplate);
       log.info("Export successful: {}", result);
@@ -392,6 +403,8 @@ public class BulkExportClient {
             mapping(BulkExportResponse.FileItem::getUrl, toList())));
 
     final String extension = extensionFromFormat(outputFormat, outputExtension);
+    // The manifest is validated in BulkExportTemplate before it reaches here, which guarantees
+    // that each type is a FHIR resource type name and so cannot escape the destination directory.
     return urlsByType.entrySet().stream()
         .flatMap(entry -> IntStream.range(0, entry.getValue().size())
             .mapToObj(index -> new UrlDownloadEntry(

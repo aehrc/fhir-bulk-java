@@ -20,15 +20,20 @@ package au.csiro.filestore;
 import lombok.Value;
 import org.apache.commons.io.IOUtils;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.StandardOpenOption;
 import javax.annotation.Nonnull;
 
 /**
  * An implementation of {@link FileStore} that uses the local filesystem.
+ *
+ * @author Piotr Szul
+ * @author John Grimes
  */
 class LocalFileStore implements FileStore {
 
@@ -62,8 +67,9 @@ class LocalFileStore implements FileStore {
 
     @Override
     public boolean mkdirs() {
-      file.mkdirs();
-      return true;
+      // File.mkdirs() returns false both when creation fails and when the directory is already
+      // there, so the directory has to be checked for as well to report success correctly.
+      return file.mkdirs() || file.isDirectory();
     }
 
     @Nonnull
@@ -86,7 +92,15 @@ class LocalFileStore implements FileStore {
 
     @Override
     public long writeAll(@Nonnull final InputStream is) throws IOException {
-      try (final OutputStream os = new FileOutputStream(file)) {
+      // NOFOLLOW_LINKS refuses to open the destination if it is a symlink, which covers a symlink
+      // pre-placed under the name of a file about to be downloaded. Symlinks encountered higher up
+      // the path are still followed, as pointing an output directory at other storage through a
+      // symlink is a legitimate thing to do. Unlike CREATE_NEW, this still allows a regular file
+      // already at the destination to be overwritten, which a retried download relies on to
+      // replace a partial write from a previous attempt.
+      try (final OutputStream os = Files.newOutputStream(file.toPath(),
+          StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
+          LinkOption.NOFOLLOW_LINKS)) {
         return IOUtils.copyLarge(is, os);
       }
     }
